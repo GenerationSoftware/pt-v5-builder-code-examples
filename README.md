@@ -1,16 +1,6 @@
-# Foundry template
+# PoolTogether V5 Builder Code Examples
 
-Template to kickstart a Foundry project.
-
-## Getting started
-
-The easiest way to get started is by clicking the [Use this template](https://github.com/pooltogether/foundry-template/generate) button at the top right of this page.
-
-If you prefer to go the CLI way:
-
-```
-forge init my-project --template https://github.com/pooltogether/foundry-template
-```
+A collection of code examples for builders looking to build on top of PoolTogether V5.
 
 ## Development
 
