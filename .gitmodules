@@ -12,3 +12,6 @@
 [submodule "lib/pt-v5-prize-pool"]
 	path = lib/pt-v5-prize-pool
 	url = https://github.com/GenerationSoftware/pt-v5-prize-pool
+[submodule "lib/uniform-random-number"]
+	path = lib/uniform-random-number
+	url = https://github.com/GenerationSoftware/uniform-random-number
