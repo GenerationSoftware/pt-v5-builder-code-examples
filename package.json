@@ -1,14 +1,14 @@
 {
-  "name": "@pooltogether/foundry-template",
+  "name": "@generationsoftware/builder-code-examples",
   "version": "1.0.0",
-  "description": "Template to kickstart a Foundry project",
+  "description": "A collection of code examples for builders looking to build on top of PoolTogether V5.",
   "author": {
-    "name": "PoolTogether Inc.",
-    "url": "https://github.com/pooltogether"
+    "name": "G9 Software Inc.",
+    "url": "https://github.com/GenerationSoftware"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pooltogether/foundry-template.git"
+    "url": "git+https://github.com/GenerationSoftware/builder-code-examples.git"
   },
   "scripts": {
     "clean": "forge clean",
