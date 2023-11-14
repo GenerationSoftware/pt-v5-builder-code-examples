@@ -1,0 +1,152 @@
+# Prize Pixels - Vault Hook
+
+### _Using Hooks to Mint Additional Tokens To Winners_
+
+| [Overview](#overview)
+| [Design](#design)
+| [Implementation](#implementation)
+| [Setting the Hook](#setting-the-hook)
+|
+
+## Overview
+
+In this example, we'll use prize hooks to mint additional tokens (Prize Pixels) to winners in PoolTogether V5. These tokens could then be redeemed and used to paint on a communal canvas to provide a fun and interactive experience through prize hooks; however, in this example we will just demonstrate token minting process.
+
+## Design
+
+In this example, we'll assume that our end product will use a communal canvas of a predefined pixel width and height. Therefore, we should ensure that our prize pixels are minted at a defined daily rate such that the number of pixels that can be used to paint on the canvas each day is stable even if the number of daily winners varies drastically over time.
+
+### Stable Daily Mint Rate
+
+We can achieve a simple stable mint rate of `x` per day by only minting prize pixels to winners of the first `x` daily prizes. If the number of estimated prizes in the daily tier (`n`) is less than `x`, then each winner will receive a proportional amount of the daily mint rate (`x` / `n`), otherwise each winner will receive exactly one prize pixel.
+
+### Verifying Winners
+
+Since the hook should support all vaults, not just vaults deployed by the current vault factory, we need a reliable way to verify that a winner has won a prize before minting them prize pixels.
+
+The prize pool contract provides an `isWinner` function that can be used to verify if the given address has won a specific prize on a vault for the last awarded draw. We can call this function with the data passed to the `afterPrizeClaim` hook to verify a winner before we mint them prize tokens.
+
+## Implementation
+
+#### Import the `IVaultHooks` interface and extend the contract with OpenZeppelin's ERC20 base contract:
+
+```solidity
+import { ERC20 } from "openzeppelin/token/ERC20/ERC20.sol";
+import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+
+contract PrizePixelHook is ERC20, IVaultHooks {
+  // hook code goes here...
+}
+```
+
+#### Add a constructor to initialize the contract with the prize pool address and target daily mint rate:
+
+```solidity
+import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
+
+// ...
+
+error TargetMintPerDayZero();
+error PrizePoolAddressZero();
+
+uint256 public targetMintPerDay;
+PrizePool public prizePool;
+
+constructor(uint256 targetMintPerDay_, PrizePool prizePool_) ERC20("Prize Pixel", "PrizePixel") {
+  if (0 == targetMintPerDay_) revert TargetMintPerDayZero();
+  if (address(0) == address(prizePool_)) revert PrizePoolAddressZero();
+
+  targetMintPerDay = targetMintPerDay_;
+  prizePool = prizePool_;
+}
+```
+
+#### Add the required hooks for the `IVaultHooks` interface:
+
+```solidity
+function beforeClaimPrize(
+  address,
+  uint8,
+  uint32,
+  uint96,
+  address
+) external pure returns (address) {
+  // We won't need this hook, so it can remain empty.
+}
+
+function afterClaimPrize(
+  address winner,
+  uint8 tier,
+  uint32 prizeIndex,
+  uint256, // We won't need the prize value in our calculations
+  address recipient
+) external {
+  /// Prize pixel minting logic goes here...
+}
+```
+
+#### Verify that the proclaimed winner has actually won a prize:
+
+```solidity
+error DidNotWin(address vault, address winner, uint8 tier, uint32 prizeIndex);
+
+function afterClaimPrize(...) external {
+
+  if (!prizePool.isWinner(msg.sender, winner, tier, prizeIndex)) {
+    revert DidNotWin(msg.sender, winner, tier, prizeIndex);
+  }
+
+}
+```
+
+> Note that we use the message sender as the vault address since hooks are called from vault contracts.
+
+#### Check if the winner has won any prize pixels and mint them a proportional amount of the daily mint rate if they won:
+
+```solidity
+event WonPrizePixels(
+  address indexed recipient,
+  uint256 tokensPerWinner,
+  address indexed winner,
+  uint8 indexed tier,
+  uint32 prizeIndex
+);
+
+function afterClaimPrize(...) external {
+
+  // ...
+
+  if (tier == prizePool.numberOfTiers() - 2 && prizeIndex < targetMintPerDay) {
+    uint32 _estimatedNumberOfPrizes = prizePool.getTierPrizeCount(tier);
+    uint256 tokensPerWinner = 1;
+    if (_estimatedNumberOfPrizes < targetMintPerDay) {
+      tokensPerWinner = targetMintPerDay / _estimatedNumberOfPrizes;
+    }
+
+    emit WonPrizePixels(recipient, tokensPerWinner, winner, tier, prizeIndex);
+    _mint(recipient, tokensPerWinner);
+  }
+
+}
+```
+
+We use the `getTierPrizeCount` function on the prize pool to estimate the number of daily prizes that were won in the last awarded draw. If there are less expected winners than the daily mint rate of prize pixels, then each winner will receive a proportional amount of the target mint rate.
+
+### Done!
+
+Now anybody who uses the hook has an additional chance to win prize pixels everyday! See the full implementation [here](./PrizePixelHook.sol).
+
+## Setting the Hook
+
+If a you want to set this hook on a prize vault, you will need to:
+
+1. Deploy the hook contract, or use an existing deployment
+2. Call `setHooks` on the prize vault contract with the following information:
+
+```solidity
+VaultHooks({
+  useBeforeClaimPrize: false;
+  useAfterClaimPrize: true;
+  implementation: 0x... // replace with the hook deployment contract
+});
+```
