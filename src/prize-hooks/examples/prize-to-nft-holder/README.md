@@ -104,7 +104,7 @@ function afterClaimPrize(
 
 ### Done!
 
-We now have a hook that can award prizes to random NFT holders! See the full implementation [here](./PrizeToEnumerableNFTHolderHook.sol).
+We now have a hook that can award prizes to random NFT holders! See the full implementation [here](./PrizeToNFTHolderHook.sol).
 
 ## Setting the Hook
 
