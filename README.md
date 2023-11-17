@@ -1,8 +1,19 @@
 # PoolTogether V5 Builder Code Examples
 
-A collection of code examples for builders looking to build on top of PoolTogether V5.
+A collection of code examples for builders looking to build with the PoolTogether V5 protocol.
 
-## Development
+## Directory
+
+### Vault Prize Hook Examples
+
+- [Awarding Prizes to NFT Holders](./src/prize-hooks/examples/prize-to-nft-holder/README.md)
+- [Minting Tokens to Prize Winners](./src/prize-hooks/examples/prize-pixels/README.md)
+- [Redirecting Prizes to a Different Address](./src/prize-hooks/examples/prize-burn/README.md)
+- [Donating Prizes back to the Prize Pool](./src/prize-hooks/examples/prize-recycle/README.md)
+
+> For more info on prize hooks, see the [prize hook reference docs](https://dev.pooltogether.com/).
+
+## Repository - Development & Testing
 
 ### Installation
 

@@ -26,6 +26,8 @@ Since the hook should support all vaults, not just vaults deployed by the curren
 
 The prize pool contract provides an `isWinner` function that can be used to verify if the given address has won a specific prize on a vault for the last awarded draw. We can call this function with the data passed to the `afterPrizeClaim` hook to verify a winner before we mint them prize tokens.
 
+To protect against replay attacks from malicious vaults, we will also maintain a mapping of hooked prizes to ensure it's impossible to win prize pixels more than once for the same prize.
+
 ## Implementation
 
 #### Import the `IVaultHooks` interface and extend the contract with OpenZeppelin's ERC20 base contract:
@@ -85,23 +87,65 @@ function afterClaimPrize(
 }
 ```
 
+#### Check if the winner is eligible for prize pixels:
+
+```solidity
+function afterClaimPrize(...) external {
+  if (tier == prizePool.numberOfTiers() - 2 && prizeIndex < targetMintPerDay) {
+
+    // ...
+
+  }
+}
+```
+
 #### Verify that the proclaimed winner has actually won a prize:
 
 ```solidity
 error DidNotWin(address vault, address winner, uint8 tier, uint32 prizeIndex);
+```
 
-function afterClaimPrize(...) external {
-
-  if (!prizePool.isWinner(msg.sender, winner, tier, prizeIndex)) {
-    revert DidNotWin(msg.sender, winner, tier, prizeIndex);
-  }
-
+```solidity
+if (!prizePool.isWinner(msg.sender, winner, tier, prizeIndex)) {
+  revert DidNotWin(msg.sender, winner, tier, prizeIndex);
 }
 ```
 
 > Note that we use the message sender as the vault address since hooks are called from vault contracts.
 
-#### Check if the winner has won any prize pixels and mint them a proportional amount of the daily mint rate if they won:
+#### Protect against replay attacks:
+
+```solidity
+error RepeatPrizeHook(
+  address vault,
+  address winner,
+  uint24 drawId,
+  uint8 tier,
+  uint32 prizeIndex
+);
+```
+
+```solidity
+mapping(address vault =>
+  mapping(address account =>
+    mapping(uint24 drawId =>
+      mapping(uint8 tier =>
+        mapping(uint32 prizeIndex => bool hooked)
+      )
+    )
+  )
+) internal _hookedPrizes;
+```
+
+```solidity
+uint24 _awardedDrawId = prizePool.getLastAwardedDrawId();
+if (_hookedPrizes[msg.sender][winner][_awardedDrawId][tier][prizeIndex]) {
+  revert RepeatPrizeHook(msg.sender, winner, _awardedDrawId, tier, prizeIndex);
+}
+_hookedPrizes[msg.sender][winner][_awardedDrawId][tier][prizeIndex] = true;
+```
+
+#### Mint the winner a proportional amount of prize pixels based on the estimated number of winners:
 
 ```solidity
 event WonPrizePixels(
@@ -111,23 +155,17 @@ event WonPrizePixels(
   uint8 indexed tier,
   uint32 prizeIndex
 );
+```
 
-function afterClaimPrize(...) external {
-
-  // ...
-
-  if (tier == prizePool.numberOfTiers() - 2 && prizeIndex < targetMintPerDay) {
-    uint32 _estimatedNumberOfPrizes = prizePool.getTierPrizeCount(tier);
-    uint256 tokensPerWinner = 1;
-    if (_estimatedNumberOfPrizes < targetMintPerDay) {
-      tokensPerWinner = targetMintPerDay / _estimatedNumberOfPrizes;
-    }
-
-    emit WonPrizePixels(recipient, tokensPerWinner, winner, tier, prizeIndex);
-    _mint(recipient, tokensPerWinner);
-  }
-
+```solidity
+uint32 _estimatedNumberOfPrizes = prizePool.getTierPrizeCount(tier);
+uint256 tokensPerWinner = 1;
+if (_estimatedNumberOfPrizes < targetMintPerDay) {
+  tokensPerWinner = targetMintPerDay / _estimatedNumberOfPrizes;
 }
+
+emit WonPrizePixels(recipient, tokensPerWinner, winner, tier, prizeIndex);
+_mint(recipient, tokensPerWinner);
 ```
 
 We use the `getTierPrizeCount` function on the prize pool to estimate the number of daily prizes that were won in the last awarded draw. If there are less expected winners than the daily mint rate of prize pixels, then each winner will receive a proportional amount of the target mint rate.
