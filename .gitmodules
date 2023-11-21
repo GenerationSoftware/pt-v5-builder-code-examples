@@ -15,3 +15,6 @@
 [submodule "lib/uniform-random-number"]
 	path = lib/uniform-random-number
 	url = https://github.com/GenerationSoftware/uniform-random-number
+[submodule "lib/pt-v5-claimable-interface"]
+	path = lib/pt-v5-claimable-interface
+	url = https://github.com/GenerationSoftware/pt-v5-claimable-interface
