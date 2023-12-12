@@ -20,7 +20,9 @@
     "lint-staged": "lint-staged",
     "prepack": "npm run clean && npm run compile",
     "prepare": "husky install",
-    "test": "forge test"
+    "test": "forge test",
+    "------------------ Deploy Scripts ------------------": "",
+    "deploy:prize-hook:prize-boost:optimism": "forge script script/prize-hooks/examples/prize-boost/deploy.s.sol:DeployPrizeBoostHook --rpc-url $OPTIMISM_RPC_URL --sender $SENDER --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $OPTIMISM_ETHERSCAN_API_KEY --priority-gas-price 100000"
   },
   "devDependencies": {
     "husky": "8.0.3",

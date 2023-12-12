@@ -1,8 +1,6 @@
-# Mnemonic phrase
-export MNEMONIC=""
-
 # Private key
 export PRIVATE_KEY=""
+export SENDER=""
 
 # Mainnet RPC URLs
 export MAINNET_RPC_URL=""
