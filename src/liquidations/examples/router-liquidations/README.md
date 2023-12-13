@@ -63,6 +63,6 @@ Thrown if the deadline has expired.
 
 ## Flash Swaps
 
-The `LiquidationPair` contract supports flash swaps through a callback that is triggered after the prize tokens are transferred to the receiver. Flashswaps are *not* possible through the `LiquidationRouter` and require a special implementation to function.
+The `LiquidationPair` contract supports flash swaps through a callback that is triggered after the prize tokens are transferred to the receiver. Flashswaps are _not_ possible through the `LiquidationRouter` and require a special implementation to function.
 
 For an example on executing a flash swap through a specific pair, see the [flash swap example](../flash-swap-liquidations/README.md).

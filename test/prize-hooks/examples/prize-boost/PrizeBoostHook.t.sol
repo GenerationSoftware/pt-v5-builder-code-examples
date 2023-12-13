@@ -7,7 +7,6 @@ import { ERC20Mock } from "openzeppelin/mocks/ERC20Mock.sol";
 import { PrizeBoostHook } from "src/prize-hooks/examples/prize-boost/PrizeBoostHook.sol";
 
 contract PrizeBoostHookTest is Test {
-
     event PrizeBoosted(address indexed recipient, address indexed vault, uint256 boostAmount, uint8 tier);
 
     PrizeBoostHook public prizeBoostHook;
@@ -76,5 +75,4 @@ contract PrizeBoostHookTest is Test {
         assertEq(boostToken.balanceOf(alice), 0);
         assertEq(boostToken.balanceOf(address(prizeBoostHook)), boostAmount - 1);
     }
-
 }
