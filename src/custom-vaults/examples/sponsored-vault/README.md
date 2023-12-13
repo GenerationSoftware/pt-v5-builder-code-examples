@@ -148,8 +148,8 @@ contract SponsoredVault is IClaimable {
 
 ```solidity
 function deposit(uint256 _amount) external {
-    asset.safeTransferFrom(msg.sender, address(this), _amount);
-    twabController.mint(msg.sender, SafeCast.toUint96(_amount));
+  asset.safeTransferFrom(msg.sender, address(this), _amount);
+  twabController.mint(msg.sender, SafeCast.toUint96(_amount));
 }
 ```
 
@@ -157,7 +157,7 @@ We use the `SafeCast` library from Openzeppelin to ensure that the amount does n
 
 All accounting logic is handled by the `TwabController`, so we call the `mint` function with the address of `this` contract as the vault address.
 
-> Note that we do the state change *after* the assets have been transferred to the contract. This prevents reentrancy attacks from inflating their share value past their deposited asset value.
+> Note that we do the state change _after_ the assets have been transferred to the contract. This prevents reentrancy attacks from inflating their share value past their deposited asset value.
 
 ### Withdrawals
 
@@ -165,14 +165,14 @@ All accounting logic is handled by the `TwabController`, so we call the `mint` f
 
 ```solidity
 function withdraw(uint256 _amount) external {
-    twabController.burn(msg.sender, SafeCast.toUint96(_amount));
-    asset.transfer(msg.sender, _amount);
+  twabController.burn(msg.sender, SafeCast.toUint96(_amount));
+  asset.transfer(msg.sender, _amount);
 }
 ```
 
 Similar to the deposit function, we handle the accounting changes through the `TwabController`. We are withdrawing assets, so we use the `burn` function to decrease the shares that the depositor holds.
 
-> Note that we `burn` shares *before* transferring any assets to prevent reentrancy attacks from being able to inflate their asset balance past their share value.
+> Note that we `burn` shares _before_ transferring any assets to prevent reentrancy attacks from being able to inflate their asset balance past their share value.
 
 ### Reading Balances
 
@@ -180,11 +180,11 @@ Similar to the deposit function, we handle the accounting changes through the `T
 
 ```solidity
 function balanceOf(address _account) external view returns (uint256) {
-    return twabController.balanceOf(address(this), _account);
+  return twabController.balanceOf(address(this), _account);
 }
 ```
 
-This function reads the balance stored in the `TwabController`. This returns the actual share balance for the account, *not* the average balance.
+This function reads the balance stored in the `TwabController`. This returns the actual share balance for the account, _not_ the average balance.
 
 ### Sponsoring the Vault
 
@@ -192,8 +192,12 @@ This function reads the balance stored in the `TwabController`. This returns the
 
 ```solidity
 function donatePrizeTokens(uint256 _amount) external {
-    prizePool.prizeToken().safeTransferFrom(msg.sender, address(prizePool), _amount);
-    prizePool.contributePrizeTokens(address(this), _amount);
+  prizePool.prizeToken().safeTransferFrom(
+    msg.sender,
+    address(prizePool),
+    _amount
+  );
+  prizePool.contributePrizeTokens(address(this), _amount);
 }
 ```
 
@@ -207,16 +211,24 @@ The caller must approve this contract to spend their prize tokens before calling
 error CallerNotClaimer(address caller, address claimer);
 
 function claimPrize(
-    address _winner,
-    uint8 _tier,
-    uint32 _prizeIndex,
-    uint96 _fee,
-    address _feeRecipient
+  address _winner,
+  uint8 _tier,
+  uint32 _prizeIndex,
+  uint96 _fee,
+  address _feeRecipient
 ) external returns (uint256) {
-    if (claimer != msg.sender) {
-        revert CallerNotClaimer(msg.sender, claimer);
-    }
-    return prizePool.claimPrize(_winner, _tier, _prizeIndex, _winner, _fee, _feeRecipient);
+  if (claimer != msg.sender) {
+    revert CallerNotClaimer(msg.sender, claimer);
+  }
+  return
+    prizePool.claimPrize(
+      _winner,
+      _tier,
+      _prizeIndex,
+      _winner,
+      _fee,
+      _feeRecipient
+    );
 }
 ```
 
