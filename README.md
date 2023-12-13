@@ -7,6 +7,7 @@ A collection of code examples for builders looking to build with the PoolTogethe
 ### Vault Prize Hook Examples
 
 - [Awarding Prizes to NFT Holders](./src/prize-hooks/examples/prize-to-nft-holder/README.md)
+- [Boosting Prizes on a Vault](./src/prize-hooks/examples/prize-boost/README.md)
 - [Minting Tokens to Prize Winners](./src/prize-hooks/examples/prize-pixels/README.md)
 - [Redirecting Prizes to a Different Address](./src/prize-hooks/examples/prize-burn/README.md)
 - [Donating Prizes back to the Prize Pool](./src/prize-hooks/examples/prize-recycle/README.md)
