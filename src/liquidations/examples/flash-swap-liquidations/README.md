@@ -3,11 +3,12 @@
 | [Overview](#overview)
 | [Design](#deisgn)
 | [Example](#example)
+| [Try it out](#try-it-out)
 |
 
 ## Overview
 
-Flashswaps are unique swaps where the sender receives the output first, executes some external logic to obtain input tokens, and sends the required input amount to the swap contract. In order for this to be possible, the contract verifies that the required token input has been received at the end of the transaction and fails if they haven't.
+Flashswaps are unique swaps where the sender receives the output first, executes some external logic to obtain input tokens and sends the required input amount to the swap contract, keeping the profit from the arbitrage. In order for this to be possible, the contract verifies that the required token input has been received at the end of the transaction and fails if they haven't.
 
 In PoolTogether V5, flashswaps can be used with yield liquidations as a way to atomically liquidate yield for prize tokens with an onchain market without having to worry about volatility.
 
@@ -21,4 +22,8 @@ During the callback function, the flashswap contract must acquire the necessary 
 
 ## Example
 
-For an example of using a `LiquidationPair` flashswap with Uniswap, see this [example flashswap contract](https://github.com/GenerationSoftware/pt-v5-flash-liquidator/blob/cd19685f83a285ef50145717248fa3ce296b3b48/src/UniswapFlashLiquidation.sol).
+For an example of using a `LiquidationPair` flashswap with Uniswap, see this [example flashswap contract](https://github.com/GenerationSoftware/pt-v5-flash-liquidator/blob/main/src/UniswapFlashLiquidation.sol).
+
+## Try it out!
+
+Check out the [Cabana Flash](https://flash.cabana.fi/) to participate in PoolTogether V5 yield liquidations and make profit with flashswaps!
