@@ -33,7 +33,7 @@ To protect against replay attacks from malicious vaults, we will also maintain a
 #### Import the `IPrizeHooks` interface and extend the contract with OpenZeppelin's ERC20 base contract:
 
 ```solidity
-import { ERC20 } from "openzeppelin/token/ERC20/ERC20.sol";
+import { ERC20 } from "openzeppelin-v5/token/ERC20/ERC20.sol";
 import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
 contract PrizePixelHook is ERC20, IPrizeHooks {

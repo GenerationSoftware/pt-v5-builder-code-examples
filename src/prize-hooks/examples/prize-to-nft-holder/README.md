@@ -32,7 +32,7 @@ contract PrizeToEnumerableNFTHolderHook is IPrizeHooks {
 #### Create a constructor that sets the enumerable token address and prize pool address:
 
 ```solidity
-import { IERC721Enumerable } from "openzeppelin/token/ERC721/extensions/IERC721Enumerable.sol";
+import { IERC721Enumerable } from "openzeppelin-v5/token/ERC721/extensions/IERC721Enumerable.sol";
 import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 
 error TokenNotERC721Enumerable();

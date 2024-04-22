@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
-import { ERC20 } from "openzeppelin/token/ERC20/ERC20.sol";
+import { ERC20 } from "openzeppelin-v5/token/ERC20/ERC20.sol";
 
 /// @notice Thrown if the target mint per day is zero.
 error TargetMintPerDayZero();

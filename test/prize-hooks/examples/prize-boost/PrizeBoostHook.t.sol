@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { Test } from "forge-std/Test.sol";
-import { ERC20Mock } from "openzeppelin/mocks/ERC20Mock.sol";
+import { ERC20Mock } from "openzeppelin-v5/mocks/token/ERC20Mock.sol";
 
 import { PrizeBoostHook } from "src/prize-hooks/examples/prize-boost/PrizeBoostHook.sol";
 

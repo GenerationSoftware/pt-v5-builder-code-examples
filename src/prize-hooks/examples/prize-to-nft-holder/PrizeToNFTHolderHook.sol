@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
-import { IERC721Enumerable } from "openzeppelin/token/ERC721/extensions/IERC721Enumerable.sol";
+import { IERC721Enumerable } from "openzeppelin-v5/token/ERC721/extensions/IERC721Enumerable.sol";
 import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 import { UniformRandomNumber } from "uniform-random-number/UniformRandomNumber.sol";
 

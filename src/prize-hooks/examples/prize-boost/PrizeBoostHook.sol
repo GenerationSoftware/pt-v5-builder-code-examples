@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
-import { IERC20 } from "openzeppelin/interfaces/IERC20.sol";
+import { IERC20 } from "openzeppelin-v5/interfaces/IERC20.sol";
 
 /// @title PoolTogether V5 - Prize Boost Vault Hook
 /// @notice This contract is a vault hook for PoolTogether V5 that sends additional prize POOL to winners.

@@ -30,7 +30,7 @@ contract PrizeBoostHook is IPrizeHooks {
 #### Add a constructor that can be used to set the boost information:
 
 ```solidity
-import { IERC20 } from "openzeppelin/interfaces/IERC20.sol";
+import { IERC20 } from "openzeppelin-v5/interfaces/IERC20.sol";
 
 // ...
 
