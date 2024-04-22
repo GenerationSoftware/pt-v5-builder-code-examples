@@ -22,12 +22,12 @@ We can accomplish the first step by using the `beforeClaimPrize` hook call to re
 
 ## Implementation
 
-#### Import the `IVaultHooks` interface and extend the contract:
+#### Import the `IPrizeHooks` interface and extend the contract:
 
 ```solidity
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizeRecycleHook is IVaultHooks {
+contract PrizeRecycleHook is IPrizeHooks {
   // hook code goes here...
 }
 ```
@@ -39,7 +39,7 @@ import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 
 error PrizePoolAddressZero();
 
-contract PrizeRecycleHook is IVaultHooks {
+contract PrizeRecycleHook is IPrizeHooks {
   PrizePool public prizePool;
 
   constructor(PrizePool prizePool_) {

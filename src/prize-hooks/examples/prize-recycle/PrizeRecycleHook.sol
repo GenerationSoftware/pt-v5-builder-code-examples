@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.24;
 
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 
 /// @notice Thrown if the prize pool address is the zero address.
@@ -12,7 +12,7 @@ error PrizePoolAddressZero();
 /// behalf of the vault.
 /// @dev !!! WARNING !!! This contract has not been audited and is intended for demonstrative use only.
 /// @author G9 Software Inc.
-contract PrizeRecycleHook is IVaultHooks {
+contract PrizeRecycleHook is IPrizeHooks {
     /// @notice The prize pool to contribute prizes back to.
     PrizePool public prizePool;
 
@@ -23,15 +23,15 @@ contract PrizeRecycleHook is IVaultHooks {
         prizePool = prizePool_;
     }
 
-    /// @inheritdoc IVaultHooks
+    /// @inheritdoc IPrizeHooks
     /// @dev Returns the prize pool address as the prize recipient address.
-    function beforeClaimPrize(address, uint8, uint32, uint96, address) external view returns (address) {
-        return address(prizePool);
+    function beforeClaimPrize(address, uint8, uint32, uint96, address) external view returns (address prizeRecipient, bytes memory data) {
+        prizeRecipient = address(prizePool);
     }
 
-    /// @inheritdoc IVaultHooks
+    /// @inheritdoc IPrizeHooks
     /// @dev Contributes the prize amount back to the prize pool on behalf of the vault.
-    function afterClaimPrize(address, uint8, uint32, uint256, address) external {
+    function afterClaimPrize(address, uint8, uint32, uint256, address, bytes memory) external {
         uint256 _balance = prizePool.prizeToken().balanceOf(address(prizePool));
         prizePool.contributePrizeTokens(msg.sender, _balance);
     }

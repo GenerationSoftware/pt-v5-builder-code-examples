@@ -30,13 +30,13 @@ To protect against replay attacks from malicious vaults, we will also maintain a
 
 ## Implementation
 
-#### Import the `IVaultHooks` interface and extend the contract with OpenZeppelin's ERC20 base contract:
+#### Import the `IPrizeHooks` interface and extend the contract with OpenZeppelin's ERC20 base contract:
 
 ```solidity
 import { ERC20 } from "openzeppelin/token/ERC20/ERC20.sol";
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizePixelHook is ERC20, IVaultHooks {
+contract PrizePixelHook is ERC20, IPrizeHooks {
   // hook code goes here...
 }
 ```
@@ -63,7 +63,7 @@ constructor(uint256 targetMintPerDay_, PrizePool prizePool_) ERC20("Prize Pixel"
 }
 ```
 
-#### Add the required hooks for the `IVaultHooks` interface:
+#### Add the required hooks for the `IPrizeHooks` interface:
 
 ```solidity
 function beforeClaimPrize(

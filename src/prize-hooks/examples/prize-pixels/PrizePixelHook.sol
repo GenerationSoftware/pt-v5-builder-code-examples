@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.24;
 
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 import { ERC20 } from "openzeppelin/token/ERC20/ERC20.sol";
 
@@ -30,7 +30,7 @@ error RepeatPrizeHook(address vault, address winner, uint24 drawId, uint8 tier, 
 /// @notice This contract mints Prize Pixel tokens at a target daily rate to winners in PoolTogether V5.
 /// @dev !!! WARNING !!! This contract has not been audited and is intended for demonstrative use only.
 /// @author G9 Software Inc.
-contract PrizePixelHook is ERC20, IVaultHooks {
+contract PrizePixelHook is ERC20, IPrizeHooks {
     /// @notice Emitted when a prize recipient wins prize pixels.
     /// @param recipient The address of the recipient of the prize pixel tokens
     /// @param tokensPerWinner The number of prize pixel tokens won
@@ -68,18 +68,18 @@ contract PrizePixelHook is ERC20, IVaultHooks {
         prizePool = prizePool_;
     }
 
-    /// @inheritdoc IVaultHooks
+    /// @inheritdoc IPrizeHooks
     /// @dev This prize hook does not implement the `beforeClaimPrize` call, but it is still required in the
-    /// IVaultHooks interface.
-    function beforeClaimPrize(address, uint8, uint32, uint96, address) external pure returns (address) {}
+    /// IPrizeHooks interface.
+    function beforeClaimPrize(address, uint8, uint32, uint96, address) external pure returns (address, bytes memory) {}
 
-    /// @inheritdoc IVaultHooks
+    /// @inheritdoc IPrizeHooks
     /// @dev If the prize tier is the current daily prize, the recipient will have a chance to win prize pixels
     /// as well. This is determined by the prize index. All winners that have a prize index lower than the
     /// target mint per day will split the daily prize pixels.
     /// @dev The prize win is verified on the prize pool before minting any tokens. If it is a false claim, this
     /// function will revert.
-    function afterClaimPrize(address winner, uint8 tier, uint32 prizeIndex, uint256, address recipient) external {
+    function afterClaimPrize(address winner, uint8 tier, uint32 prizeIndex, uint256, address recipient, bytes memory) external {
         // We only award prize pixels to the current daily prize winners with a prize index less than the target
         // number of pixels minted per day.
         if (tier == prizePool.numberOfTiers() - 2 && prizeIndex < targetMintPerDay) {

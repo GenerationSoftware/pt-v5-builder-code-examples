@@ -17,12 +17,12 @@ To boost a prize, our hook contract will need to hold some boost tokens and then
 
 ## Implementation
 
-#### Import the `IVaultHooks` interface and extend the contract:
+#### Import the `IPrizeHooks` interface and extend the contract:
 
 ```solidity
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizeBoostHook is IVaultHooks {
+contract PrizeBoostHook is IPrizeHooks {
   // hook code goes here...
 }
 ```

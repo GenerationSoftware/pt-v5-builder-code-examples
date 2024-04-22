@@ -19,12 +19,12 @@ The core principle of awarding prizes to a random NFT holder is simple: we use t
 
 ## Implementation
 
-#### Set up the hook contract and extend the `IVaultHooks` interface:
+#### Set up the hook contract and extend the `IPrizeHooks` interface:
 
 ```solidity
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizeToEnumerableNFTHolderHook is IVaultHooks {
+contract PrizeToEnumerableNFTHolderHook is IPrizeHooks {
   // hook code goes here...
 }
 ```
@@ -38,7 +38,7 @@ import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 error TokenNotERC721Enumerable();
 error PrizePoolAddressZero();
 
-contract PrizeToEnumerableNFTHolderHook is IVaultHooks {
+contract PrizeToEnumerableNFTHolderHook is IPrizeHooks {
   IERC721Enumerable public enumerableToken;
   PrizePool public prizePool;
 
@@ -90,7 +90,7 @@ function beforeClaimPrize(
 
 > We also use the `UniformRandomNumber` library to ensure we don't introduce any [modulo bias](https://medium.com/hownetworks/dont-waste-cycles-with-modulo-bias-35b6fdafcf94) to the random selection.
 
-#### Add an empty `afterClaimPrize` hook to satisfy the `IVaultHooks` interface:
+#### Add an empty `afterClaimPrize` hook to satisfy the `IPrizeHooks` interface:
 
 ```solidity
 function afterClaimPrize(

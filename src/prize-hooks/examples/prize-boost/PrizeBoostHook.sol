@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.24;
 
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 import { IERC20 } from "openzeppelin/interfaces/IERC20.sol";
 
 /// @title PoolTogether V5 - Prize Boost Vault Hook
 /// @notice This contract is a vault hook for PoolTogether V5 that sends additional prize POOL to winners.
 /// @author G9 Software Inc.
-contract PrizeBoostHook is IVaultHooks {
+contract PrizeBoostHook is IPrizeHooks {
     /// @notice Emitted when a prize win is boosted.
     /// @param recipient The recipient of the prize and boost
     /// @param vault The vault the prize was won through
@@ -39,17 +39,17 @@ contract PrizeBoostHook is IVaultHooks {
         maxTier = _maxTier;
     }
 
-    /// @inheritdoc IVaultHooks
+    /// @inheritdoc IPrizeHooks
     /// @dev This prize hook does not implement the `beforeClaimPrize` call, but it is still required in the
-    /// IVaultHooks interface.
-    function beforeClaimPrize(address, uint8, uint32, uint96, address) external pure returns (address) {}
+    /// IPrizeHooks interface.
+    function beforeClaimPrize(address, uint8, uint32, uint96, address) external pure returns (address, bytes memory) {}
 
-    /// @inheritdoc IVaultHooks
+    /// @inheritdoc IPrizeHooks
     /// @notice Sends an additional prize boost to the recipient of a prize if the tier is less than or equal
     /// to the maximum tier to boost.
     /// @dev Fails silently as to not interrupt a prize claim if the prize is not eligible for a boost or if
     /// this contract runs out of boost funds.
-    function afterClaimPrize(address, uint8 tier, uint32, uint256, address recipient) external {
+    function afterClaimPrize(address, uint8 tier, uint32, uint256, address recipient, bytes memory) external {
         if (msg.sender == vault && tier <= maxTier && boostToken.balanceOf(address(this)) >= boostAmount) {
             boostToken.transfer(recipient, boostAmount);
             emit PrizeBoosted(recipient, vault, boostAmount, tier);
