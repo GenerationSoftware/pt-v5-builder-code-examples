@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.19;
+pragma solidity 0.8.24;
 
 import "forge-std/console2.sol";
 import { Script } from "forge-std/Script.sol";
 
 import { PrizeBoostHook } from "src/prize-hooks/examples/prize-boost/PrizeBoostHook.sol";
-import { IERC20 } from "openzeppelin/interfaces/IERC20.sol";
+import { IERC20 } from "openzeppelin-v5/interfaces/IERC20.sol";
 
 contract DeployPrizeBoostHook is Script {
     function run() public {

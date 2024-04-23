@@ -30,13 +30,13 @@ To protect against replay attacks from malicious vaults, we will also maintain a
 
 ## Implementation
 
-#### Import the `IVaultHooks` interface and extend the contract with OpenZeppelin's ERC20 base contract:
+#### Import the `IPrizeHooks` interface and extend the contract with OpenZeppelin's ERC20 base contract:
 
 ```solidity
-import { ERC20 } from "openzeppelin/token/ERC20/ERC20.sol";
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { ERC20 } from "openzeppelin-v5/token/ERC20/ERC20.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizePixelHook is ERC20, IVaultHooks {
+contract PrizePixelHook is ERC20, IPrizeHooks {
   // hook code goes here...
 }
 ```
@@ -63,7 +63,7 @@ constructor(uint256 targetMintPerDay_, PrizePool prizePool_) ERC20("Prize Pixel"
 }
 ```
 
-#### Add the required hooks for the `IVaultHooks` interface:
+#### Add the required hooks for the `IPrizeHooks` interface:
 
 ```solidity
 function beforeClaimPrize(
@@ -72,7 +72,7 @@ function beforeClaimPrize(
   uint32,
   uint96,
   address
-) external pure returns (address) {
+) external pure returns (address, bytes memory) {
   // We won't need this hook, so it can remain empty.
 }
 
@@ -81,7 +81,8 @@ function afterClaimPrize(
   uint8 tier,
   uint32 prizeIndex,
   uint256, // We won't need the prize value in our calculations
-  address recipient
+  address recipient,
+  bytes memory
 ) external {
   /// Prize pixel minting logic goes here...
 }
@@ -91,7 +92,7 @@ function afterClaimPrize(
 
 ```solidity
 function afterClaimPrize(...) external {
-  if (tier == prizePool.numberOfTiers() - 2 && prizeIndex < targetMintPerDay) {
+  if (tier == prizePool.numberOfTiers() - 3 && prizeIndex < targetMintPerDay) {
 
     // ...
 

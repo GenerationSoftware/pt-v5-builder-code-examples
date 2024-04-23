@@ -19,12 +19,12 @@ The core principle of awarding prizes to a random NFT holder is simple: we use t
 
 ## Implementation
 
-#### Set up the hook contract and extend the `IVaultHooks` interface:
+#### Set up the hook contract and extend the `IPrizeHooks` interface:
 
 ```solidity
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizeToEnumerableNFTHolderHook is IVaultHooks {
+contract PrizeToEnumerableNFTHolderHook is IPrizeHooks {
   // hook code goes here...
 }
 ```
@@ -32,13 +32,13 @@ contract PrizeToEnumerableNFTHolderHook is IVaultHooks {
 #### Create a constructor that sets the enumerable token address and prize pool address:
 
 ```solidity
-import { IERC721Enumerable } from "openzeppelin/token/ERC721/extensions/IERC721Enumerable.sol";
+import { IERC721Enumerable } from "openzeppelin-v5/token/ERC721/extensions/IERC721Enumerable.sol";
 import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 
 error TokenNotERC721Enumerable();
 error PrizePoolAddressZero();
 
-contract PrizeToEnumerableNFTHolderHook is IVaultHooks {
+contract PrizeToEnumerableNFTHolderHook is IPrizeHooks {
   IERC721Enumerable public enumerableToken;
   PrizePool public prizePool;
 
@@ -73,16 +73,10 @@ function beforeClaimPrize(
   uint32 prizeIndex,
   uint96,
   address
-) external view returns (address) {
-  uint256 _entropy = uint256(
-    keccak256(abi.encode(prizePool.getWinningRandomNumber(), tier, prizeIndex))
-  );
-  uint256 _randomTokenIndex = UniformRandomNumber.uniform(
-    _entropy,
-    enumerableToken.totalSupply()
-  );
-  return
-    enumerableToken.ownerOf(enumerableToken.tokenByIndex(_randomTokenIndex));
+) external view returns (address prizeRecipient, bytes memory data) {
+  uint256 _entropy = uint256(keccak256(abi.encode(prizePool.getWinningRandomNumber(), tier, prizeIndex)));
+  uint256 _randomTokenIndex = UniformRandomNumber.uniform(_entropy, enumerableToken.totalSupply());
+  prizeRecipient = enumerableToken.ownerOf(enumerableToken.tokenByIndex(_randomTokenIndex));
 }
 ```
 
@@ -90,7 +84,7 @@ function beforeClaimPrize(
 
 > We also use the `UniformRandomNumber` library to ensure we don't introduce any [modulo bias](https://medium.com/hownetworks/dont-waste-cycles-with-modulo-bias-35b6fdafcf94) to the random selection.
 
-#### Add an empty `afterClaimPrize` hook to satisfy the `IVaultHooks` interface:
+#### Add an empty `afterClaimPrize` hook to satisfy the `IPrizeHooks` interface:
 
 ```solidity
 function afterClaimPrize(
@@ -98,7 +92,8 @@ function afterClaimPrize(
   uint8,
   uint32,
   uint256,
-  address
+  address,
+  bytes memory
 ) external pure {}
 ```
 

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { Test } from "forge-std/Test.sol";
-import { ERC20Mock } from "openzeppelin/mocks/ERC20Mock.sol";
+import { ERC20Mock } from "openzeppelin-v5/mocks/token/ERC20Mock.sol";
 
 import { PrizeBoostHook } from "src/prize-hooks/examples/prize-boost/PrizeBoostHook.sol";
 
@@ -32,7 +32,7 @@ contract PrizeBoostHookTest is Test {
         vm.expectEmit();
         emit PrizeBoosted(alice, address(this), boostAmount, maxTier);
 
-        prizeBoostHook.afterClaimPrize(alice, maxTier, 0, 0, alice);
+        prizeBoostHook.afterClaimPrize(alice, maxTier, 0, 0, alice, "");
 
         assertEq(boostToken.balanceOf(alice), boostAmount);
         assertEq(boostToken.balanceOf(address(prizeBoostHook)), boostAmount * 9);
@@ -45,7 +45,7 @@ contract PrizeBoostHookTest is Test {
         assertEq(boostToken.balanceOf(address(prizeBoostHook)), boostAmount * 10);
 
         vm.startPrank(alice);
-        prizeBoostHook.afterClaimPrize(alice, maxTier, 0, 0, alice);
+        prizeBoostHook.afterClaimPrize(alice, maxTier, 0, 0, alice, "");
         vm.stopPrank();
 
         assertEq(boostToken.balanceOf(alice), 0);
@@ -58,7 +58,7 @@ contract PrizeBoostHookTest is Test {
         assertEq(boostToken.balanceOf(alice), 0);
         assertEq(boostToken.balanceOf(address(prizeBoostHook)), boostAmount * 10);
 
-        prizeBoostHook.afterClaimPrize(alice, maxTier + 1, 0, 0, alice);
+        prizeBoostHook.afterClaimPrize(alice, maxTier + 1, 0, 0, alice, "");
 
         assertEq(boostToken.balanceOf(alice), 0);
         assertEq(boostToken.balanceOf(address(prizeBoostHook)), boostAmount * 10);
@@ -70,7 +70,7 @@ contract PrizeBoostHookTest is Test {
         assertEq(boostToken.balanceOf(alice), 0);
         assertEq(boostToken.balanceOf(address(prizeBoostHook)), boostAmount - 1);
 
-        prizeBoostHook.afterClaimPrize(alice, maxTier, 0, 0, alice);
+        prizeBoostHook.afterClaimPrize(alice, maxTier, 0, 0, alice, "");
 
         assertEq(boostToken.balanceOf(alice), 0);
         assertEq(boostToken.balanceOf(address(prizeBoostHook)), boostAmount - 1);

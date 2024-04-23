@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.24;
 
-import { IERC20 } from "openzeppelin/interfaces/IERC20.sol";
-import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
+import { IERC20 } from "openzeppelin-v5/interfaces/IERC20.sol";
+import { SafeERC20 } from "openzeppelin-v5/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "openzeppelin-v5/utils/math/SafeCast.sol";
 
 import { PrizePool, TwabController } from "pt-v5-prize-pool/PrizePool.sol";
 import { IClaimable } from "pt-v5-claimable-interface/interfaces/IClaimable.sol";
@@ -73,7 +73,7 @@ contract SponsoredVault is IClaimable {
     /// @notice Sponsors the vault by contributing prize tokens to the prize pool.
     /// @param _amount The amount of prize tokens to contribute
     function donatePrizeTokens(uint256 _amount) external {
-        prizePool.prizeToken().safeTransferFrom(msg.sender, address(prizePool), _amount);
+        IERC20(address(prizePool.prizeToken())).safeTransferFrom(msg.sender, address(prizePool), _amount);
         prizePool.contributePrizeTokens(address(this), _amount);
     }
 

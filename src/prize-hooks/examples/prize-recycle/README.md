@@ -22,12 +22,12 @@ We can accomplish the first step by using the `beforeClaimPrize` hook call to re
 
 ## Implementation
 
-#### Import the `IVaultHooks` interface and extend the contract:
+#### Import the `IPrizeHooks` interface and extend the contract:
 
 ```solidity
-import { IVaultHooks } from "pt-v5-vault/interfaces/IVaultHooks.sol";
+import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizeRecycleHook is IVaultHooks {
+contract PrizeRecycleHook is IPrizeHooks {
   // hook code goes here...
 }
 ```
@@ -39,7 +39,7 @@ import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
 
 error PrizePoolAddressZero();
 
-contract PrizeRecycleHook is IVaultHooks {
+contract PrizeRecycleHook is IPrizeHooks {
   PrizePool public prizePool;
 
   constructor(PrizePool prizePool_) {
@@ -61,7 +61,7 @@ function beforeClaimPrize(...) external view returns (address) {
 
 #### Contribute prize value on behalf of the vault:
 
-Vaults participate in the prize pool by sending POOL tokens to the contract and immediately calling the `contributePrizeTokens` function after. Since we redirected the prizes to be sent to the prize pool in the previous hook call, we can now contribute them on behalf of the vault in the second call. This is only possible since the hooks are called in the same transaction (`beforeClaimPrize` -> `claimPrize` -> `afterClaimPrize`). If they weren't called atomically, there would be a race condition in between the moment when the prize is transferred to the prize pool and the moment that the `contributePrizeTokens` function is called.
+Vaults participate in the prize pool by sending prize tokens to the contract and immediately calling the `contributePrizeTokens` function after. Since we redirected the prizes to be sent to the prize pool in the previous hook call, we can now contribute them on behalf of the vault in the second call. This is only possible since the hooks are called in the same transaction (`beforeClaimPrize` -> `claimPrize` -> `afterClaimPrize`). If they weren't called atomically, there would be a race condition in between the moment when the prize is transferred to the prize pool and the moment that the `contributePrizeTokens` function is called.
 
 > Note: If you wanted to only donate a portion of the prize back to the prize pool, you could redirect the prize to be sent to this contract and then handle the prize division in this hook before sending the remainder back to your address.
 
