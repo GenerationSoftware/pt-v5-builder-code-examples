@@ -5,7 +5,7 @@ import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 import { IERC20 } from "openzeppelin-v5/interfaces/IERC20.sol";
 
 /// @title PoolTogether V5 - Prize Boost Vault Hook
-/// @notice This contract is a vault hook for PoolTogether V5 that sends additional prize POOL to winners.
+/// @notice This contract is a vault hook for PoolTogether V5 that sends additional boost tokens to winners.
 /// @author G9 Software Inc.
 contract PrizeBoostHook is IPrizeHooks {
     /// @notice Emitted when a prize win is boosted.

@@ -73,16 +73,10 @@ function beforeClaimPrize(
   uint32 prizeIndex,
   uint96,
   address
-) external view returns (address) {
-  uint256 _entropy = uint256(
-    keccak256(abi.encode(prizePool.getWinningRandomNumber(), tier, prizeIndex))
-  );
-  uint256 _randomTokenIndex = UniformRandomNumber.uniform(
-    _entropy,
-    enumerableToken.totalSupply()
-  );
-  return
-    enumerableToken.ownerOf(enumerableToken.tokenByIndex(_randomTokenIndex));
+) external view returns (address prizeRecipient, bytes memory data) {
+  uint256 _entropy = uint256(keccak256(abi.encode(prizePool.getWinningRandomNumber(), tier, prizeIndex)));
+  uint256 _randomTokenIndex = UniformRandomNumber.uniform(_entropy, enumerableToken.totalSupply());
+  prizeRecipient = enumerableToken.ownerOf(enumerableToken.tokenByIndex(_randomTokenIndex));
 }
 ```
 
@@ -98,7 +92,8 @@ function afterClaimPrize(
   uint8,
   uint32,
   uint256,
-  address
+  address,
+  bytes memory
 ) external pure {}
 ```
 

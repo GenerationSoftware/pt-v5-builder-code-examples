@@ -82,7 +82,7 @@ contract PrizePixelHook is ERC20, IPrizeHooks {
     function afterClaimPrize(address winner, uint8 tier, uint32 prizeIndex, uint256, address recipient, bytes memory) external {
         // We only award prize pixels to the current daily prize winners with a prize index less than the target
         // number of pixels minted per day.
-        if (tier == prizePool.numberOfTiers() - 2 && prizeIndex < targetMintPerDay) {
+        if (tier == prizePool.numberOfTiers() - 3 && prizeIndex < targetMintPerDay) {
             // Verify the prize was won through the calling vault by checking the prize pool
             if (!prizePool.isWinner(msg.sender, winner, tier, prizeIndex)) {
                 revert DidNotWin(msg.sender, winner, tier, prizeIndex);

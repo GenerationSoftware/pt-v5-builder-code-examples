@@ -54,11 +54,11 @@ We set the vault that is eligible for prize boosts, the boost token that will be
 ```solidity
 event PrizeBoosted(address indexed recipient, address indexed vault, uint256 boostAmount, uint8 tier);
 
-function beforeClaimPrize(address, uint8, uint32, uint96, address) external pure returns (address) {
+function beforeClaimPrize(address, uint8, uint32, uint96, address) external pure returns (address, bytes memory) {
   // We don't use this hook call, so we do nothing
 }
 
-function afterClaimPrize(address, uint8 tier, uint32, uint256, address recipient) external {
+function afterClaimPrize(address, uint8 tier, uint32, uint256, address recipient, bytes memory) external {
   if (msg.sender == vault && tier <= maxTier && boostToken.balanceOf(address(this)) >= boostAmount) {
     boostToken.transfer(recipient, boostAmount);
     emit PrizeBoosted(recipient, vault, boostAmount, tier);
@@ -91,4 +91,4 @@ VaultHooks({
 
 ## Use Cases
 
-There are already multiple ways to boost a vault's winning chances by contributing to the prize pool on behalf of the vault, or by using a [Vault Booster](https://github.com/GenerationSoftware/pt-v5-vault-boost), but both of those methods require the boost to be paid to the prize pool as POOL tokens. By using this prize hook as an incentives program, depositors can opt-in to a prize boost paid directly to them as any token.
+There are already multiple ways to boost a vault's winning chances by contributing to the prize pool on behalf of the vault, or by using a [Vault Booster](https://github.com/GenerationSoftware/pt-v5-vault-boost), but both of those methods require the boost to be paid to the prize pool as prize tokens. By using this prize hook as an incentives program, depositors can opt-in to a prize boost paid directly to them as any token.

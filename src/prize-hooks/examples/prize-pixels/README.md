@@ -72,7 +72,7 @@ function beforeClaimPrize(
   uint32,
   uint96,
   address
-) external pure returns (address) {
+) external pure returns (address, bytes memory) {
   // We won't need this hook, so it can remain empty.
 }
 
@@ -81,7 +81,8 @@ function afterClaimPrize(
   uint8 tier,
   uint32 prizeIndex,
   uint256, // We won't need the prize value in our calculations
-  address recipient
+  address recipient,
+  bytes memory
 ) external {
   /// Prize pixel minting logic goes here...
 }
@@ -91,7 +92,7 @@ function afterClaimPrize(
 
 ```solidity
 function afterClaimPrize(...) external {
-  if (tier == prizePool.numberOfTiers() - 2 && prizeIndex < targetMintPerDay) {
+  if (tier == prizePool.numberOfTiers() - 3 && prizeIndex < targetMintPerDay) {
 
     // ...
 
