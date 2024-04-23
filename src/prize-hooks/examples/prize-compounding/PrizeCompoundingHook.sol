@@ -122,20 +122,21 @@ contract PrizeCompoundingHook is IPrizeHooks, Ownable {
         if (_prizeRecipient != address(this)) {
             revert DidNotReceivePrize(_prizeRecipient);
         }
+        if (_prizeAmount > 0) {
+            uint256 _feeAmount = calculateFee(_prizeAmount);
+            uint256 _prizeVaultSharePayout = _prizeAmount - _feeAmount;
+            uint256 _prizeVaultSharesAvailable = prizeVault.balanceOf(address(this));
 
-        uint256 _feeAmount = calculateFee(_prizeAmount);
-        uint256 _prizeVaultSharePayout = _prizeAmount - _feeAmount;
-        uint256 _prizeVaultSharesAvailable = prizeVault.balanceOf(address(this));
-
-        // We only swap if we have enough prize vault tokens for the entire payout. Otherwise, we redirect the prize to the winner.
-        if (_prizeVaultSharesAvailable >= _prizeVaultSharePayout) {
-            // This contract keeps the prize token fee as incentives for prize vault token refills
-            IERC20(address(prizeVault)).safeTransfer(_winner, _prizeVaultSharePayout);
-            emit PrizeCompounded(msg.sender, _winner, _prizeVaultSharePayout, _feeAmount);
-        } else {
-            // No fee is taken since the swap could not be fulfilled
-            prizeToken.safeTransfer(_winner, _prizeAmount);
-            emit NotEnoughLiquidityToCompound(msg.sender, _winner, _prizeAmount, _prizeVaultSharePayout, _prizeVaultSharesAvailable);
+            // We only swap if we have enough prize vault tokens for the entire payout. Otherwise, we redirect the prize to the winner.
+            if (_prizeVaultSharesAvailable >= _prizeVaultSharePayout) {
+                // This contract keeps the prize token fee as incentives for prize vault token refills
+                IERC20(address(prizeVault)).safeTransfer(_winner, _prizeVaultSharePayout);
+                emit PrizeCompounded(msg.sender, _winner, _prizeVaultSharePayout, _feeAmount);
+            } else {
+                // No fee is taken since the swap could not be fulfilled
+                prizeToken.safeTransfer(_winner, _prizeAmount);
+                emit NotEnoughLiquidityToCompound(msg.sender, _winner, _prizeAmount, _prizeVaultSharePayout, _prizeVaultSharesAvailable);
+            }
         }
     }
 
