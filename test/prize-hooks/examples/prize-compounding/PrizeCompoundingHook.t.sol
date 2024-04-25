@@ -28,7 +28,7 @@ contract PrizeCompoundingHookTest is Test {
         fork = vm.createFork('optimism', forkBlock);
         vm.selectFork(fork);
         vm.warp(forkTimestamp);
-        prizeComp = new PrizeCompoundingHook(przWETH, prizeVaultFactory, 50, 50);
+        prizeComp = new PrizeCompoundingHook(przWETH, prizeVaultFactory, 50, 50, address(this));
 
         // przPOOL was not deployed by the factory, so we need to trust it separately
         prizeComp.grantRole(prizeComp.TRUSTED_VAULT_ROLE(), address(przPOOL));
@@ -44,32 +44,35 @@ contract PrizeCompoundingHookTest is Test {
 
     function testConstructorSetsAdminRole() public {
         assertEq(prizeComp.hasRole(prizeComp.DEFAULT_ADMIN_ROLE(), address(this)), true);
+        PrizeCompoundingHook adminNotThis =new PrizeCompoundingHook(przWETH, prizeVaultFactory, 0, 0, address(1));
+        assertEq(adminNotThis.hasRole(prizeComp.DEFAULT_ADMIN_ROLE(), address(1)), true);
+        assertEq(adminNotThis.hasRole(prizeComp.DEFAULT_ADMIN_ROLE(), address(this)), false);
     }
 
     function testConstructorMaxFee() public {
         vm.expectRevert(abi.encodeWithSelector(PrizeCompoundingHook.MaxFeeExceeded.selector, 101, 100));
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 51, 50);
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 51, 50, address(this));
 
         vm.expectRevert(abi.encodeWithSelector(PrizeCompoundingHook.MaxFeeExceeded.selector, 101, 100));
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 50, 51);
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 50, 51, address(this));
 
         vm.expectRevert(abi.encodeWithSelector(PrizeCompoundingHook.MaxFeeExceeded.selector, 101, 100));
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 101, 0);
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 101, 0, address(this));
 
         vm.expectRevert(abi.encodeWithSelector(PrizeCompoundingHook.MaxFeeExceeded.selector, 101, 100));
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 0, 101);
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 0, 101, address(this));
 
         // does not revert:
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 0, 100);
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 100, 0);
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 0, 0);
-        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 1, 1);
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 0, 100, address(this));
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 100, 0, address(this));
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 0, 0, address(this));
+        new PrizeCompoundingHook(przWETH, prizeVaultFactory, 1, 1, address(this));
     }
 
     function testConstructorPrizeTokenDepositAsset() public {
         // cannot auto-compound WETH into przPOOL since assets don't match
         vm.expectRevert(abi.encodeWithSelector(PrizeCompoundingHook.PrizeTokenNotDepositAsset.selector, przWETH.asset(), przPOOL.asset()));
-        new PrizeCompoundingHook(przPOOL, prizeVaultFactory, 0, 0);
+        new PrizeCompoundingHook(przPOOL, prizeVaultFactory, 0, 0, address(this));
     }
 
     function testBeforeClaimPrize() public {

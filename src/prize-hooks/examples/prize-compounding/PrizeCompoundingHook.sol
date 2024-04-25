@@ -98,13 +98,15 @@ contract PrizeCompoundingHook is IPrizeHooks, AccessControl {
     /// prize vault token supply. The fee can vary from 0% to 1% which is defined by the range [0, 100], 100 being 1%.
     /// @param liquidityFee_ The percentile fee to take on each swap that will be kept for the owner as a reward for providing 
     /// liquidity. The fee can vary from 0% to 1% which is defined by the range [0, 100], 100 being 1%.
+    /// @param admin_ The admin address for the contract
     /// @dev `rewardFee_` + `liquidityFee_` cannot exceed 1% in total
     /// @dev Sets the sender as the admin of the contract
     constructor(
         PrizeVault prizeVault_,
         PrizeVaultFactory trustedPrizeVaultFactory_,
         uint256 rewardFee_,
-        uint256 liquidityFee_
+        uint256 liquidityFee_,
+        address admin_
     ) AccessControl() {
         if (rewardFee_ + liquidityFee_ > MAX_FEE) {
             revert MaxFeeExceeded(rewardFee_ + liquidityFee_, MAX_FEE);
@@ -117,7 +119,7 @@ contract PrizeCompoundingHook is IPrizeHooks, AccessControl {
         if (address(prizeToken) != prizeVault_.asset()) {
             revert PrizeTokenNotDepositAsset(address(prizeToken), prizeVault_.asset());
         }
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
     }
 
     /// @inheritdoc IPrizeHooks
