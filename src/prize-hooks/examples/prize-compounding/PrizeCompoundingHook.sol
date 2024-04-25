@@ -4,11 +4,8 @@ pragma solidity ^0.8.24;
 import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 import { PrizeVault } from "pt-v5-vault/PrizeVault.sol";
 import { PrizeVaultFactory } from "pt-v5-vault/PrizeVaultFactory.sol";
-import { Ownable } from "openzeppelin-v5/access/Ownable.sol";
+import { AccessControl } from "openzeppelin-v5/access/AccessControl.sol";
 import { SafeERC20, IERC20 } from "openzeppelin-v5/token/ERC20/utils/SafeERC20.sol";
-
-// The max fee value (100 is equal to 1%)
-uint256 constant MAX_FEE = 100;
 
 /// @title PoolTogether V5 - Prize Compounding Vault
 /// @notice Uses both hook calls to redirect prizes to this contract and swap into prize tokens at a 
@@ -17,14 +14,21 @@ uint256 constant MAX_FEE = 100;
 /// @dev This contract will hold some liquidity of the prize token and prize vault token in order to 
 /// perform swaps. As such, the owner will need to transfer the initial balance of prize vault tokens.
 /// Excess funds can be withdrawn at any time by the owner.
-/// @dev !!! WARNING !!! This contract has not been audited and is intended for demonstrative use only.
+/// @dev Any vaults that are deployed from the trusted vault factory can use this hook, and the admin
+/// of the hook can grant other vaults the `TRUSTED_VAULT_ROLE` to add them to the allow list.
+/// @dev !!! WARNING !!! This contract has not been audited.
 /// @author G9 Software Inc.
-contract PrizeCompoundingHook is IPrizeHooks, Ownable {
+contract PrizeCompoundingHook is IPrizeHooks, AccessControl {
     using SafeERC20 for IERC20;
 
-    /// @notice Thrown when the configured prize vault is not trusted.
-    /// @param prizeVault the prize vault address
-    error PrizeVaultNotTrusted(address prizeVault);
+    /// @notice The max fee value (100 is equal to 1%)
+    uint256 public constant MAX_FEE = 100;
+
+    /// @notice The fee denominator (equal to 100%)
+    uint256 public constant FEE_DENOMINATOR = 10000;
+
+    /// @notice Trusted vault role for access control
+    bytes32 public constant TRUSTED_VAULT_ROLE = bytes32(uint256(0x01));
 
     /// @notice Thrown when the prize token address does not match the asset needed to deposit
     /// into the prize vault.
@@ -71,8 +75,12 @@ contract PrizeCompoundingHook is IPrizeHooks, Ownable {
     /// @param amount The amount of tokens withdrawn
     event WithdrawTokenBalance(IERC20 indexed token, address indexed recipient, uint256 amount);
 
-    /// @notice The fee that will be taken from prizes to pay for the swap [0, 100] = [0%, 1%]
-    uint256 public immutable fee;
+    /// @notice The percentage fee that will be taken from prizes and be rewarded to external actors to recycle prize tokens
+    /// back into the prize vault [0, 100] = [0%, 1%]
+    uint256 public immutable rewardFee;
+
+    /// @notice The percentage fee that will be kept by the hook to compensate the owner for providing liquidity [0, 100] = [0%, 1%]
+    uint256 public immutable liquidityFee;
 
     /// @notice The prize pool token that is sent as prizes
     IERC20 public immutable prizeToken;
@@ -86,22 +94,30 @@ contract PrizeCompoundingHook is IPrizeHooks, Ownable {
     /// @notice Constructs a new Prize Recycle Hook contract.
     /// @param prizeVault_ The prize vault to compound prizes into
     /// @param trustedPrizeVaultFactory_ The prize vault factory that will be used to verify that callers are trusted vaults.
-    /// @param fee_ The percentile fee to take on each swap that will be used to reward external actors that replenish the
+    /// @param rewardFee_ The percentile fee to take on each swap that will be used to reward external actors that replenish the
     /// prize vault token supply. The fee can vary from 0% to 1% which is defined by the range [0, 100], 100 being 1%.
-    constructor(PrizeVault prizeVault_, PrizeVaultFactory trustedPrizeVaultFactory_, uint256 fee_) Ownable(msg.sender) {
-        if (fee_ > MAX_FEE) {
-            revert MaxFeeExceeded(fee_, MAX_FEE);
+    /// @param liquidityFee_ The percentile fee to take on each swap that will be kept for the owner as a reward for providing 
+    /// liquidity. The fee can vary from 0% to 1% which is defined by the range [0, 100], 100 being 1%.
+    /// @dev `rewardFee_` + `liquidityFee_` cannot exceed 1% in total
+    /// @dev Sets the sender as the admin of the contract
+    constructor(
+        PrizeVault prizeVault_,
+        PrizeVaultFactory trustedPrizeVaultFactory_,
+        uint256 rewardFee_,
+        uint256 liquidityFee_
+    ) AccessControl() {
+        if (rewardFee_ + liquidityFee_ > MAX_FEE) {
+            revert MaxFeeExceeded(rewardFee_ + liquidityFee_, MAX_FEE);
         }
-        if (!trustedPrizeVaultFactory_.deployedVaults(address(prizeVault_))) {
-            revert PrizeVaultNotTrusted(address(prizeVault_));
-        }
-        fee = fee_;
+        rewardFee = rewardFee_;
+        liquidityFee = liquidityFee_;
         trustedPrizeVaultFactory = trustedPrizeVaultFactory_;
         prizeVault = prizeVault_;
         prizeToken = IERC20(address(prizeVault_.prizePool().prizeToken()));
         if (address(prizeToken) != prizeVault_.asset()) {
             revert PrizeTokenNotDepositAsset(address(prizeToken), prizeVault_.asset());
         }
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /// @inheritdoc IPrizeHooks
@@ -115,8 +131,10 @@ contract PrizeCompoundingHook is IPrizeHooks, Ownable {
     /// tokens (at a slight discount) and send them to the prize recipient. If there is not enough liquidity, it sends the
     /// prize tokens to the winner instead.
     /// @dev Throws if the caller is not a trusted prize vault.
+    /// @dev Throws if the hook did not receive the prize (this happens if the before hook was not called).
+    /// @dev Does nothing if the prize amount is zero.
     function afterClaimPrize(address _winner, uint8, uint32, uint256 _prizeAmount, address _prizeRecipient, bytes memory) external {
-        if (!trustedPrizeVaultFactory.deployedVaults(msg.sender)) {
+        if (!isTrustedVault(msg.sender)) {
             revert CallerNotTrustedPrizeVault(msg.sender);
         }
         if (_prizeRecipient != address(this)) {
@@ -140,15 +158,27 @@ contract PrizeCompoundingHook is IPrizeHooks, Ownable {
         }
     }
 
-    /// @notice Returns the portion of `_amount` that will be used for fees.
-    /// @param _amount The amount of prize tokens
-    function calculateFee(uint256 _amount) public view returns(uint256) {
-        return (fee * _amount) / MAX_FEE;
+    /// @notice Returns true if the vault is trusted by this hook.
+    /// @param _vault The address of the vault to check
+    function isTrustedVault(address _vault) public view returns (bool) {
+        return hasRole(TRUSTED_VAULT_ROLE, _vault) || trustedPrizeVaultFactory.deployedVaults(_vault);
     }
 
-    /// @notice Returns the current prize token reward that will be payed out.
-    function currentRecycleReward() external view returns(uint256) {
-        return calculateFee(prizeToken.balanceOf(address(this)));
+    /// @notice Returns the portion of a prize that will be kept for fees.
+    /// @param _amount The amount of prize tokens in the prize
+    function calculateFee(uint256 _amount) public view returns(uint256) {
+        return ((liquidityFee + rewardFee) * _amount) / FEE_DENOMINATOR;
+    }
+
+    /// @notice Returns the prize token reward that will be payed out to the recycler.
+    /// @param _amount The amount of prize tokens in the hook contract
+    function calculateRecycleReward(uint256 _amount) public view returns(uint256) {
+        return (rewardFee * _amount) / FEE_DENOMINATOR;
+    }
+
+    /// @notice Returns the current reward in prize tokens that will be payed out the the recycler.
+    function currentRecycleReward() external view returns (uint256) {
+        return calculateRecycleReward(prizeToken.balanceOf(address(this)));
     }
 
     /// @notice Deposits the prize tokens in this contract back into the prize vault and pays the sender a reward.
@@ -157,7 +187,7 @@ contract PrizeCompoundingHook is IPrizeHooks, Ownable {
     function recyclePrizeTokens(address _rewardRecipient) external returns(uint256) {
         // calculate the reward and recycle amount
         uint256 _prizeTokenBalance = prizeToken.balanceOf(address(this));
-        uint256 _reward = calculateFee(_prizeTokenBalance);
+        uint256 _reward = calculateRecycleReward(_prizeTokenBalance);
         uint256 _recycleAmount = _prizeTokenBalance - _reward;
 
         // deposit the recycle amount
@@ -176,7 +206,7 @@ contract PrizeCompoundingHook is IPrizeHooks, Ownable {
     /// @param _token The token to withdraw
     /// @param _recipient The recipient of the token
     /// @param _amount The amount of the token to withdraw
-    function withdrawTokenBalance(IERC20 _token, address _recipient, uint256 _amount) external onlyOwner() {
+    function withdrawTokenBalance(IERC20 _token, address _recipient, uint256 _amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _token.safeTransfer(_recipient, _amount);
         emit WithdrawTokenBalance(_token, _recipient, _amount);
     }
