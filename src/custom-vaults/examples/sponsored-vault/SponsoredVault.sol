@@ -6,7 +6,7 @@ import { SafeERC20 } from "openzeppelin-v5/token/ERC20/utils/SafeERC20.sol";
 
 import { PrizePool, TwabController } from "pt-v5-prize-pool/PrizePool.sol";
 import { TwabERC20 } from "pt-v5-vault/TwabERC20.sol";
-import { Claimable } from "pt-v5-vault/Claimable.sol";
+import { Claimable } from "pt-v5-vault/abstract/Claimable.sol";
 
 /// @notice Thrown if the asset address is the zero address
 error AssetZeroAddress();
