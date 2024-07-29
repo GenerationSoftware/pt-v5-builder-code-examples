@@ -32,6 +32,7 @@ jobs:
       - name: Run Forge test with gas report
         env:
           OPTIMISM_RPC_URL: ${{ secrets.OPTIMISM_RPC_URL }}
+          BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
         run: |
           forge test --gas-report
         id: test
@@ -42,6 +43,7 @@ jobs:
       - name: Run Forge coverage
         env:
           OPTIMISM_RPC_URL: ${{ secrets.OPTIMISM_RPC_URL }}
+          BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
         run: |
           forge coverage --report lcov && lcov --extract lcov.info -o lcov.info 'src/*'
         id: coverage
