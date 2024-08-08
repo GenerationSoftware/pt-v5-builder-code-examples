@@ -11,6 +11,9 @@ import { ERC721ConsecutiveMock } from "openzeppelin-v5/mocks/token/ERC721Consecu
 
 contract NftChanceBoosterHookTest is Test {
 
+    event BoostedVaultWithPrize(address indexed prizePool, address indexed boostedVault, uint256 prizeAmount, uint256 pickAttempts);
+    event PrizeWonByNftHolder(address indexed nftWinner, address indexed vault, address indexed donor, uint8 tier, uint32 prizeIndex, uint256 prizeAmount);
+
     uint256 fork;
     uint256 forkBlock = 17582112;
     uint256 forkTimestamp = 1721996771;
@@ -54,8 +57,11 @@ contract NftChanceBoosterHookTest is Test {
         // check a bunch of numbers and ensure there are no valid winners selected
         for (uint256 i = 0; i < 1000; i++) {
             vm.mockCall(address(prizePool), abi.encodeWithSelector(PrizePool.getWinningRandomNumber.selector), abi.encode(randomNumber + i));
-            address recipient = callBeforeClaimPrize(0, 0);
+            (address recipient, bytes memory hookData) = callBeforeClaimPrize(0, 0);
             assertEq(recipient, address(prizePool));
+            (uint256 pickAttempts) = abi.decode(hookData, (uint256));
+            assertGt(pickAttempts, 0);
+            assertLt(pickAttempts, 10); // probably won't ever exceed 10 pick attempts, but this is not strictly required
         }
     }
 
@@ -73,9 +79,12 @@ contract NftChanceBoosterHookTest is Test {
         uint256 numAliceWins;
         for (uint256 i = 0; i < 1000; i++) {
             vm.mockCall(address(prizePool), abi.encodeWithSelector(PrizePool.getWinningRandomNumber.selector), abi.encode(randomNumber + i));
-            address recipient = callBeforeClaimPrize(0, 0);
-            if (recipient == bob) numBobWins++;
-            else if (recipient == alice) numAliceWins++;
+            (address recipient, bytes memory hookData) = callBeforeClaimPrize(0, 0);
+            if (recipient == address(nftBooster)) {
+                (address winner) = abi.decode(hookData, (address));
+                if (winner == bob) numBobWins++;
+                else if (winner == alice) numAliceWins++;
+            }
         }
         assertGt(numBobWins, 800);
         assertGt(numAliceWins, 50);
@@ -96,9 +105,12 @@ contract NftChanceBoosterHookTest is Test {
         uint256 numAliceWins;
         for (uint256 i = 0; i < 1000; i++) {
             vm.mockCall(address(prizePool), abi.encodeWithSelector(PrizePool.getWinningRandomNumber.selector), abi.encode(randomNumber + i));
-            address recipient = callBeforeClaimPrize(0, 0);
-            if (recipient == bob) numBobWins++;
-            else if (recipient == alice) numAliceWins++;
+            (address recipient, bytes memory hookData) = callBeforeClaimPrize(0, 0);
+            if (recipient == address(nftBooster)) {
+                (address winner) = abi.decode(hookData, (address));
+                if (winner == bob) numBobWins++;
+                else if (winner == alice) numAliceWins++;
+            }
         }
         assertGt(numBobWins, 900);
         assertEq(numAliceWins, 0);
@@ -111,22 +123,46 @@ contract NftChanceBoosterHookTest is Test {
         // check a bunch of numbers and ensure there are no valid winners selected
         for (uint256 i = 0; i < 1000; i++) {
             vm.mockCall(address(prizePool), abi.encodeWithSelector(PrizePool.getWinningRandomNumber.selector), abi.encode(randomNumber + i));
-            address recipient = callBeforeClaimPrize(0, 0);
+            (address recipient, bytes memory hookData) = callBeforeClaimPrize(0, 0);
             assertEq(recipient, address(prizePool));
+            (uint256 pickAttempts) = abi.decode(hookData, (uint256));
+            assertGt(pickAttempts, 0);
+            assertLt(pickAttempts, 10); // probably won't ever exceed 10 pick attempts, but this is not strictly required
         }
     }
 
-    function callBeforeClaimPrize(uint8 tier, uint32 prizeIndex) internal returns (address) {
+    function testAfterClaimPrizeRedirectsPrize() public {
+        address alice = holders[1];
+        deal(address(prizePool.prizeToken()), address(nftBooster), 1e18);
+        assertEq(prizePool.prizeToken().balanceOf(alice), 0);
+        assertEq(prizePool.prizeToken().balanceOf(address(nftBooster)), 1e18);
+        vm.expectEmit();
+        emit PrizeWonByNftHolder(alice, address(this), address(1), 2, 3, 1e18);
+        (bool success,) = address(nftBooster).call{ gas: 150_000 }(abi.encodeWithSelector(IPrizeHooks.afterClaimPrize.selector, address(1), 2, 3, 1e18, address(nftBooster), abi.encode(address(alice))));
+        require(success, "afterClaimPrize failed");
+        assertEq(prizePool.prizeToken().balanceOf(alice), 1e18);
+        assertEq(prizePool.prizeToken().balanceOf(address(nftBooster)), 0);
+    }
+
+    function testAfterClaimPrizeContributesPrize() public {
+        deal(address(prizePool.prizeToken()), address(prizePool), 1e18 + prizePool.prizeToken().balanceOf(address(prizePool)));
+        vm.expectEmit();
+        emit BoostedVaultWithPrize(address(prizePool), address(this), 1e18, 5);
+        (bool success,) = address(nftBooster).call{ gas: 150_000 }(abi.encodeWithSelector(IPrizeHooks.afterClaimPrize.selector, address(1), 2, 3, 1e18, address(prizePool), abi.encode(uint256(5))));
+        require(success, "afterClaimPrize failed");
+        assertEq(prizePool.getContributedBetween(address(this), prizePool.getOpenDrawId(), prizePool.getOpenDrawId()), 1e18);
+    }
+
+    function callBeforeClaimPrize(uint8 tier, uint32 prizeIndex) internal returns (address recipient, bytes memory hookData) {
         (bool success, bytes memory data) = address(nftBooster).call{ gas: 150_000 }(abi.encodeWithSelector(IPrizeHooks.beforeClaimPrize.selector, address(0), tier, prizeIndex, 0, address(0)));
         require(success, "beforeClaimPrize failed");
-        (address recipient, bytes memory hookData) = abi.decode(data, (address,bytes));
+        (recipient, hookData) = abi.decode(data, (address,bytes));
         // if (hookData.length > 0) {
         //     uint256 pickAttempt = abi.decode(hookData, (uint256));
         //     if (pickAttempt > 0) {
         //         console2.log("pick attempt", pickAttempt);
         //     }
         // }
-        return recipient;
     }
 
 }

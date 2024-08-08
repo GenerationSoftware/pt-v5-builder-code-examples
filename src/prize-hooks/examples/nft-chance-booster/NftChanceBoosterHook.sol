@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import { IPrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 import { IERC721 } from "openzeppelin-v5/token/ERC721/IERC721.sol";
-import { PrizePool, TwabController } from "pt-v5-prize-pool/PrizePool.sol";
+import { PrizePool, TwabController, SafeERC20, IERC20 } from "pt-v5-prize-pool/PrizePool.sol";
 import { UniformRandomNumber } from "uniform-random-number/UniformRandomNumber.sol";
 
 uint256 constant PICK_GAS_ESTIMATE = 60_000; // probably lower, but we set it higher to avoid a reversion
@@ -30,12 +30,23 @@ error InvalidTokenIdBounds(uint256 tokenIdLowerBound, uint256 tokenIdUpperBound)
 /// @dev This contract works best with NFTs that have iterating IDs ex. IDs: (1,2,3,4,5,...)
 /// @author G9 Software Inc.
 contract NftChanceBoosterHook is IPrizeHooks {
+    using SafeERC20 for IERC20;
 
     /// @notice Emitted when a vault is boosted with a prize re-contribution.
     /// @param prizePool The prize pool the vault was boosted on
     /// @param boostedVault The boosted vault
     /// @param prizeAmount The amount of prize tokens contributed
-    event BoostedVaultWithPrize(address indexed prizePool, address indexed boostedVault, uint256 prizeAmount);
+    /// @param pickAttempts The number of times the hook tried to pick a winner
+    event BoostedVaultWithPrize(address indexed prizePool, address indexed boostedVault, uint256 prizeAmount, uint256 pickAttempts);
+
+    /// @notice Emitted when an NFT holder wins a prize.
+    /// @param nftWinner The NFT holder that won the prize
+    /// @param vault The vault that the prize was won through
+    /// @param donor The original winner of the prize before it was redirected
+    /// @param tier The prize tier
+    /// @param prizeIndex The prize index
+    /// @param prizeAmount The amount of prize tokens won
+    event PrizeWonByNftHolder(address indexed nftWinner, address indexed vault, address indexed donor, uint8 tier, uint32 prizeIndex, uint256 prizeAmount);
 
     /// @notice The ERC721 token whose holders will have a chance to win prizes
     IERC721 public immutable nftCollection;
@@ -63,7 +74,7 @@ contract NftChanceBoosterHook is IPrizeHooks {
     /// @param prizePool_ The prize pool that is awarding prizes
     /// @param boostedVault_ The The vault that is being boosted
     /// @param minTwabOverPrizePeriod_ The minimum TWAB that the selected winner must have over the prize
-    /// period to win the prize; if set to zero, no balance is needed.
+    ///        period to win the prize; if set to zero, no balance is needed.
     /// @param tokenIdLowerBound_ The lower bound of eligible NFT IDs (inclusive)
     /// @param tokenIdUpperBound_ The upper bound of eligible NFT IDs (inclusive)
     constructor(
@@ -90,14 +101,15 @@ contract NftChanceBoosterHook is IPrizeHooks {
 
     /// @inheritdoc IPrizeHooks
     /// @dev This prize hook uses the random number from the last awarded prize pool draw to randomly select
-    /// the receiver of the prize from a list of current NFT holders. The prize tier and prize index are also
-    /// used to provide variance in the entropy for each prize so there can be multiple winners per draw.
+    /// the receiver of the prize from a list of current NFT holders. The prize data is also used to provide
+    /// variance in the entropy for each prize so there can be multiple winners per draw.
     /// @dev Tries to select a winner until the call runs out of gas before reverting to the backup action of 
     /// contributing the prize on behalf of the boosted vault.
+    /// @dev Returns the winning token holder in data if successful or the number of pick attempts if not successful.
     function beforeClaimPrize(address _winner, uint8 _tier, uint32 _prizeIndex, uint96, address) external view returns (address, bytes memory) {
         uint256 _tierStartTime;
         uint256 _tierEndTime;
-        uint256 _winningRandomNumber = prizePool.getWinningRandomNumber();
+        bytes32 _entropy = keccak256(abi.encode(prizePool.getWinningRandomNumber(), msg.sender, _winner, _tier, _prizeIndex));
         {
             uint24 _tierEndDrawId = prizePool.getLastAwardedDrawId();
             uint24 _tierStartDrawId = prizePool.computeRangeStartDrawIdInclusive(
@@ -117,7 +129,7 @@ contract NftChanceBoosterHook is IPrizeHooks {
                     _randomTokenId = tokenIdLowerBound;
                 } else {
                     _randomTokenId = tokenIdLowerBound + UniformRandomNumber.uniform(
-                        uint256(keccak256(abi.encode(_winningRandomNumber, _winner, _tier, _prizeIndex, _pickAttempt))),
+                        uint256(keccak256(abi.encode(_entropy, _pickAttempt))),
                         _numTokens
                     );
                 }
@@ -131,8 +143,8 @@ contract NftChanceBoosterHook is IPrizeHooks {
                     _recipientTwab = twabController.getTwabBetween(boostedVault, _ownerOfToken, _tierStartTime, _tierEndTime);
                 }
                 if (_recipientTwab >= minTwabOverPrizePeriod) {
-                    // The owner of the selected NFT wins the prize!
-                    return (_ownerOfToken, abi.encode(_pickAttempt));
+                    // The owner of the selected NFT will be awarded the prize in the `afterClaimPrize` callback.
+                    return (address(this), abi.encode(_ownerOfToken));
                 }
             }
         }
@@ -143,12 +155,19 @@ contract NftChanceBoosterHook is IPrizeHooks {
 
     /// @inheritdoc IPrizeHooks
     /// @dev If the recipient is set to the prize pool, the prize will be contributed on behalf of the vault
-    /// that is being boosted. Otherwise, it will do nothing (the prize will have already been sent to the
-    /// randomly selected NFT winner).
-    function afterClaimPrize(address, uint8, uint32, uint256 _prizeAmount, address _prizeRecipient, bytes memory) external {
-        if (_prizeRecipient == address(prizePool) && _prizeAmount > 0) {
-            prizePool.contributePrizeTokens(boostedVault, _prizeAmount);
-            emit BoostedVaultWithPrize(address(prizePool), boostedVault, _prizeAmount);
+    /// that is being boosted. Otherwise if this contract received the prize, it will transfer it to the 
+    /// winner passed in through the extra hook data.
+    function afterClaimPrize(address _winner, uint8 _tier, uint32 _prizeIndex, uint256 _prizeAmount, address _prizeRecipient, bytes memory _data) external {
+        if (_prizeAmount > 0) {
+            if (_prizeRecipient == address(prizePool)) {
+                uint256 _pickAttempts = abi.decode(_data, (uint256));
+                prizePool.contributePrizeTokens(boostedVault, _prizeAmount);
+                emit BoostedVaultWithPrize(address(prizePool), boostedVault, _prizeAmount, _pickAttempts);
+            } else if (_prizeRecipient == address(this)) {
+                address _nftWinner = abi.decode(_data, (address));
+                prizePool.prizeToken().safeTransfer(_nftWinner, _prizeAmount);
+                emit PrizeWonByNftHolder(_nftWinner, msg.sender, _winner, _tier, _prizeIndex, _prizeAmount);
+            }
         }
     }
 }
