@@ -28,7 +28,7 @@ contract DirectContributor is TwabERC20, Claimable, Ownable2Step {
         address owner_,
         address[] memory initialMintRecipients_,
         uint256[] memory initialMintAmounts_
-    ) Claimable(prizePool_, claimer_) TwabERC20(shareName_, shareSymbol_, prizePool.twabController()) Ownable() {
+    ) Claimable(prizePool_, claimer_) TwabERC20(shareName_, shareSymbol_, prizePool_.twabController()) Ownable() {
         _transferOwnership(owner_);
         assert(initialMintRecipients_.length == initialMintAmounts_.length);
         for (uint256 i = 0; i < initialMintRecipients_.length; i++) {
