@@ -12,7 +12,7 @@ import { TwabERC20 } from "pt-v5-vault/TwabERC20.sol";
 /// @author G9 Software Inc.
 contract DirectContributor is TwabERC20, Claimable, Ownable2Step {
 
-    /// @notice Constructs a new GP Boost Hook
+    /// @notice Constructor
     /// @param shareName_ The share token name
     /// @param shareSymbol_ The share token symbol
     /// @param prizePool_ The prize pool to participate in
