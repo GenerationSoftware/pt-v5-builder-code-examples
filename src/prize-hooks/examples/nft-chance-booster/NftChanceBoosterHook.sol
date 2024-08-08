@@ -94,7 +94,7 @@ contract NftChanceBoosterHook is IPrizeHooks {
     /// used to provide variance in the entropy for each prize so there can be multiple winners per draw.
     /// @dev Tries to select a winner until the call runs out of gas before reverting to the backup action of 
     /// contributing the prize on behalf of the boosted vault.
-    function beforeClaimPrize(address, uint8 _tier, uint32 _prizeIndex, uint96, address) external view returns (address, bytes memory) {
+    function beforeClaimPrize(address _winner, uint8 _tier, uint32 _prizeIndex, uint96, address) external view returns (address, bytes memory) {
         uint256 _tierStartTime;
         uint256 _tierEndTime;
         uint256 _winningRandomNumber = prizePool.getWinningRandomNumber();
@@ -117,7 +117,7 @@ contract NftChanceBoosterHook is IPrizeHooks {
                     _randomTokenId = tokenIdLowerBound;
                 } else {
                     _randomTokenId = tokenIdLowerBound + UniformRandomNumber.uniform(
-                        uint256(keccak256(abi.encode(_winningRandomNumber, _tier, _prizeIndex, _pickAttempt))),
+                        uint256(keccak256(abi.encode(_winningRandomNumber, _winner, _tier, _prizeIndex, _pickAttempt))),
                         _numTokens
                     );
                 }
