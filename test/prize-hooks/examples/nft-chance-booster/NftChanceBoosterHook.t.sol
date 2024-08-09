@@ -80,11 +80,10 @@ contract NftChanceBoosterHookTest is Test {
         for (uint256 i = 0; i < 1000; i++) {
             vm.mockCall(address(prizePool), abi.encodeWithSelector(PrizePool.getWinningRandomNumber.selector), abi.encode(randomNumber + i));
             (address recipient, bytes memory hookData) = callBeforeClaimPrize(0, 0);
-            if (recipient == address(nftBooster)) {
-                (address winner) = abi.decode(hookData, (address));
-                if (winner == bob) numBobWins++;
-                else if (winner == alice) numAliceWins++;
-            }
+            (uint256 pickAttempts) = abi.decode(hookData, (uint256));
+            assertGt(pickAttempts, 0);
+            if (recipient == bob) numBobWins++;
+            else if (recipient == alice) numAliceWins++;
         }
         assertGt(numBobWins, 800);
         assertGt(numAliceWins, 50);
@@ -106,11 +105,10 @@ contract NftChanceBoosterHookTest is Test {
         for (uint256 i = 0; i < 1000; i++) {
             vm.mockCall(address(prizePool), abi.encodeWithSelector(PrizePool.getWinningRandomNumber.selector), abi.encode(randomNumber + i));
             (address recipient, bytes memory hookData) = callBeforeClaimPrize(0, 0);
-            if (recipient == address(nftBooster)) {
-                (address winner) = abi.decode(hookData, (address));
-                if (winner == bob) numBobWins++;
-                else if (winner == alice) numAliceWins++;
-            }
+            (uint256 pickAttempts) = abi.decode(hookData, (uint256));
+            assertGt(pickAttempts, 0);
+            if (recipient == bob) numBobWins++;
+            else if (recipient == alice) numAliceWins++;
         }
         assertGt(numBobWins, 900);
         assertEq(numAliceWins, 0);
@@ -129,19 +127,6 @@ contract NftChanceBoosterHookTest is Test {
             assertGt(pickAttempts, 0);
             assertLt(pickAttempts, 10); // probably won't ever exceed 10 pick attempts, but this is not strictly required
         }
-    }
-
-    function testAfterClaimPrizeRedirectsPrize() public {
-        address alice = holders[1];
-        deal(address(prizePool.prizeToken()), address(nftBooster), 1e18);
-        assertEq(prizePool.prizeToken().balanceOf(alice), 0);
-        assertEq(prizePool.prizeToken().balanceOf(address(nftBooster)), 1e18);
-        vm.expectEmit();
-        emit PrizeWonByNftHolder(alice, address(this), address(1), 2, 3, 1e18);
-        (bool success,) = address(nftBooster).call{ gas: 150_000 }(abi.encodeWithSelector(IPrizeHooks.afterClaimPrize.selector, address(1), 2, 3, 1e18, address(nftBooster), abi.encode(address(alice))));
-        require(success, "afterClaimPrize failed");
-        assertEq(prizePool.prizeToken().balanceOf(alice), 1e18);
-        assertEq(prizePool.prizeToken().balanceOf(address(nftBooster)), 0);
     }
 
     function testAfterClaimPrizeContributesPrize() public {
