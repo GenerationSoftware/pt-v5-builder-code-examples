@@ -39,15 +39,6 @@ contract NftChanceBoosterHook is IPrizeHooks {
     /// @param pickAttempts The number of times the hook tried to pick a winner
     event BoostedVaultWithPrize(address indexed prizePool, address indexed boostedVault, uint256 prizeAmount, uint256 pickAttempts);
 
-    /// @notice Emitted when an NFT holder wins a prize.
-    /// @param nftWinner The NFT holder that won the prize
-    /// @param vault The vault that the prize was won through
-    /// @param donor The original winner of the prize before it was redirected
-    /// @param tier The prize tier
-    /// @param prizeIndex The prize index
-    /// @param prizeAmount The amount of prize tokens won
-    event PrizeWonByNftHolder(address indexed nftWinner, address indexed vault, address indexed donor, uint8 tier, uint32 prizeIndex, uint256 prizeAmount);
-
     /// @notice The ERC721 token whose holders will have a chance to win prizes
     IERC721 public immutable nftCollection;
 
@@ -72,9 +63,9 @@ contract NftChanceBoosterHook is IPrizeHooks {
     /// @notice Constructor to deploy the hook contract
     /// @param nftCollection_ The ERC721 token whose holders will have a chance to win prizes
     /// @param prizePool_ The prize pool that is awarding prizes
-    /// @param boostedVault_ The The vault that is being boosted
-    /// @param minTwabOverPrizePeriod_ The minimum TWAB that the selected winner must have over the prize
-    ///        period to win the prize; if set to zero, no balance is needed.
+    /// @param boostedVault_ The The vault that is boosted if a winner cannot be determined
+    /// @param minTwabOverPrizePeriod_ The minimum TWAB on the `boostedVault_` that the selected winner
+    ///        must have over the prize period to win the prize; if set to zero, no balance is needed.
     /// @param tokenIdLowerBound_ The lower bound of eligible NFT IDs (inclusive)
     /// @param tokenIdUpperBound_ The upper bound of eligible NFT IDs (inclusive)
     constructor(
@@ -105,7 +96,7 @@ contract NftChanceBoosterHook is IPrizeHooks {
     /// variance in the entropy for each prize so there can be multiple winners per draw.
     /// @dev Tries to select a winner until the call runs out of gas before reverting to the backup action of 
     /// contributing the prize on behalf of the boosted vault.
-    /// @dev Returns the winning token holder in data if successful or the number of pick attempts if not successful.
+    /// @dev Returns the number of pick attempts used in the extra hook data.
     function beforeClaimPrize(address _winner, uint8 _tier, uint32 _prizeIndex, uint96, address) external view returns (address, bytes memory) {
         uint256 _tierStartTime;
         uint256 _tierEndTime;
@@ -143,8 +134,8 @@ contract NftChanceBoosterHook is IPrizeHooks {
                     _recipientTwab = twabController.getTwabBetween(boostedVault, _ownerOfToken, _tierStartTime, _tierEndTime);
                 }
                 if (_recipientTwab >= minTwabOverPrizePeriod) {
-                    // The owner of the selected NFT will be awarded the prize in the `afterClaimPrize` callback.
-                    return (address(this), abi.encode(_ownerOfToken));
+                    // The prize will be redirected to the owner of the selected NFT
+                    return (_ownerOfToken, abi.encode(_pickAttempt + 1));
                 }
             }
         }
@@ -155,19 +146,13 @@ contract NftChanceBoosterHook is IPrizeHooks {
 
     /// @inheritdoc IPrizeHooks
     /// @dev If the recipient is set to the prize pool, the prize will be contributed on behalf of the vault
-    /// that is being boosted. Otherwise if this contract received the prize, it will transfer it to the 
-    /// winner passed in through the extra hook data.
-    function afterClaimPrize(address _winner, uint8 _tier, uint32 _prizeIndex, uint256 _prizeAmount, address _prizeRecipient, bytes memory _data) external {
-        if (_prizeAmount > 0) {
-            if (_prizeRecipient == address(prizePool)) {
-                uint256 _pickAttempts = abi.decode(_data, (uint256));
-                prizePool.contributePrizeTokens(boostedVault, _prizeAmount);
-                emit BoostedVaultWithPrize(address(prizePool), boostedVault, _prizeAmount, _pickAttempts);
-            } else if (_prizeRecipient == address(this)) {
-                address _nftWinner = abi.decode(_data, (address));
-                prizePool.prizeToken().safeTransfer(_nftWinner, _prizeAmount);
-                emit PrizeWonByNftHolder(_nftWinner, msg.sender, _winner, _tier, _prizeIndex, _prizeAmount);
-            }
+    /// that is being boosted. Otherwise this hook does nothing since the prize will have already been redirected
+    /// to the recipient.
+    function afterClaimPrize(address, uint8, uint32, uint256 _prizeAmount, address _prizeRecipient, bytes memory _data) external {
+        if (_prizeAmount > 0 && _prizeRecipient == address(prizePool)) {
+            uint256 _pickAttempts = abi.decode(_data, (uint256));
+            prizePool.contributePrizeTokens(boostedVault, _prizeAmount);
+            emit BoostedVaultWithPrize(address(prizePool), boostedVault, _prizeAmount, _pickAttempts);
         }
     }
 }
