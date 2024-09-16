@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { PrizeCompoundingSwapperHook, PrizeVault, PrizePool, ISwapper, ISwapperFactory, QuoteParams, QuotePair } from "./PrizeCompoundingSwapperHook.sol";
+import { PrizeCompoundingSwapperHook, PrizeVault, ISwapper, ISwapperFactory, QuoteParams, QuotePair } from "./PrizeCompoundingSwapperHook.sol";
 import { ISwapperFlashCallback } from "./interfaces/ISwapperFlashCallback.sol";
 import { IUniV3Oracle } from "./interfaces/IUniV3Oracle.sol";
 import { IUniswapV3Router } from "./interfaces/IUniswapV3Router.sol";
@@ -77,6 +77,20 @@ contract PrizeCompoundingSwapperHookAndClaimer is PrizeCompoundingSwapperHook, I
         uint32 scaledOfferFactor_
     ) PrizeCompoundingSwapperHook(uniV3Oracle_, swapperFactory_, compoundVault_, scaledOfferFactor_) {
         uniV3Router = uniV3Router_;
+    }
+
+    /// @notice Fetches the Uniswap V3 pool fee from the pool that the oracle uses
+    /// @param base The base token address
+    /// @param quote The quote token address
+    function fetchUniV3PoolFee(address base, address quote) public view returns (uint24) {
+        QuotePair[] memory quotePairs = new QuotePair[](1);
+        quotePairs[0] = QuotePair({
+            base: base,
+            quote: quote
+        });
+        return IUniswapV3PoolImmutables(
+            IUniV3Oracle(address(baseOracle)).getPairDetails(quotePairs)[0].pool
+        ).fee();
     }
 
     /// @notice Claims prizes for winners and auto-compounds if possible.
@@ -225,18 +239,6 @@ contract PrizeCompoundingSwapperHookAndClaimer is PrizeCompoundingSwapperHook, I
         }
     }
 
-    /// @notice Fetches the Uniswap V3 pool fee from the pool that the oracle uses
-    function _fetchUniV3PoolFee(address base, address quote) internal view returns (uint24) {
-        QuotePair[] memory quotePairs = new QuotePair[](1);
-        quotePairs[0] = QuotePair({
-            base: base,
-            quote: quote
-        });
-        return IUniswapV3PoolImmutables(
-            IUniV3Oracle(address(baseOracle)).getPairDetails(quotePairs)[0].pool
-        ).fee();
-    }
-
     /// @notice Returns the Uniswap V3 pool fee from teh pool that the oracle uses
     /// @dev Caches the result in transient storage for cheap, repetitive access
     function _uniV3PoolFee(address base, address quote) internal returns (uint24) {
@@ -245,7 +247,7 @@ contract PrizeCompoundingSwapperHookAndClaimer is PrizeCompoundingSwapperHook, I
             fee := tload(UNIV3FEE_STORAGE_KEY)
         }
         if (fee == 0) {
-            fee = _fetchUniV3PoolFee(base, quote);
+            fee = fetchUniV3PoolFee(base, quote);
             assembly {
                 tstore(UNIV3FEE_STORAGE_KEY, fee)
             }
