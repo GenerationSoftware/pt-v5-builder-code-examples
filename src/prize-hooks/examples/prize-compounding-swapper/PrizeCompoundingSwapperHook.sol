@@ -13,17 +13,6 @@ import { ISwapperFactory, CreateSwapperParams, OracleParams, CreateOracleParams,
 // size if the prize pool goes up in tiers.
 uint256 constant NEXT_TIER_DAILY_PRIZE_DENOMINATOR = 4;
 
-/// @notice Emitted when an account sets a new swapper.
-/// @param account The account setting the swapper
-/// @param newSwapper The new swapper address
-/// @param previousSwapper The previous swapper address
-event SetSwapper(address indexed account, address indexed newSwapper, address indexed previousSwapper);
-
-/// @notice Emitted when an account votes for a minimum desired prize size.
-/// @param account The account voting
-/// @param minDesiredPrizeSize The minimum desired prize size denominated in `compoundVault` tokens
-event SetPrizeSizeVote(address indexed account, uint256 minDesiredPrizeSize);
-
 /// @title PoolTogether V5 - Prize Compounding Swapper Hook
 /// @notice Uses the 0xSplits Swapper contract factory to let users create their own swappers
 /// that will receive any prizes won through this hook. External actors can then swap winnings
@@ -54,6 +43,17 @@ contract PrizeCompoundingSwapperHook is IPrizeHooks, IOracle {
 
     /// @notice Mapping of accounts to minimum desired prize size denominated in `compoundVault` tokens.
     mapping(address account => uint256 minDesiredPrizeSize) public prizeSizeVotes;
+
+    /// @notice Emitted when an account sets a new swapper.
+    /// @param account The account setting the swapper
+    /// @param newSwapper The new swapper address
+    /// @param previousSwapper The previous swapper address
+    event SetSwapper(address indexed account, address indexed newSwapper, address indexed previousSwapper);
+
+    /// @notice Emitted when an account votes for a minimum desired prize size.
+    /// @param account The account voting
+    /// @param minDesiredPrizeSize The minimum desired prize size denominated in `compoundVault` tokens
+    event SetPrizeSizeVote(address indexed account, uint256 minDesiredPrizeSize);
 
     /// @notice Thrown when the winning account votes against the current number of prize tiers.
     /// @param currentNumTiers The current number of tiers
@@ -198,6 +198,7 @@ contract PrizeCompoundingSwapperHook is IPrizeHooks, IOracle {
                     }
                 } catch {
                     // The oracle failed, so we will abstain voting for this claim
+                    data = "vote-abstained";
                 }
             }
         }
