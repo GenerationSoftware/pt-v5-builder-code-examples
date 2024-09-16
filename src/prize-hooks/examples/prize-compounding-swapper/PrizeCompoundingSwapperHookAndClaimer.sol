@@ -44,12 +44,12 @@ contract PrizeCompoundingSwapperHookAndClaimer is PrizeCompoundingSwapperHook, I
 
     /// @notice Emitted during prize compounding when the account does not have a swapper set
     /// @param account The account that does not have a swapper
-    event SwapperNotSetForWinner(address indexed account);
+    event SwapperNotSetForAccount(address indexed account);
 
-    /// @notice Thrown when the min token profit is not met for a flash swap or claim batch
-    /// @param actualProfit The actual profit that would have been received
-    /// @param minProfit The min profit required
-    error MinRewardNotMet(uint256 actualProfit, uint256 minProfit);
+    /// @notice Thrown when the min token reward is not met for prize claims or compounding
+    /// @param actualReward The actual reward that would have been received
+    /// @param minReward The min reward required
+    error MinRewardNotMet(uint256 actualReward, uint256 minReward);
 
     /// @notice Prevents reentrancy to any function with this modifier
     modifier nonReentrant() {
@@ -153,7 +153,7 @@ contract PrizeCompoundingSwapperHookAndClaimer is PrizeCompoundingSwapperHook, I
         address[] calldata accounts,
         address rewardRecipient,
         uint256 minReward
-    ) external returns (uint256 totalReward) {
+    ) external nonReentrant returns (uint256 totalReward) {
         totalReward = _compoundAccounts(accounts, rewardRecipient);
         if (totalReward < minReward) {
             revert MinRewardNotMet(totalReward, minReward);
@@ -205,7 +205,13 @@ contract PrizeCompoundingSwapperHookAndClaimer is PrizeCompoundingSwapperHook, I
     }
 
     /// @notice Compounds prizes for the given accounts
-    function _compoundAccounts(address[] calldata accounts, address rewardRecipient) internal returns (uint256 totalReward) {
+    /// @param accounts The accounts to compound for
+    /// @param rewardRecipient Where to send the reward
+    /// @return totalReward The total rewards received for compounding
+    function _compoundAccounts(
+        address[] calldata accounts,
+        address rewardRecipient
+    ) internal returns (uint256 totalReward) {
         // Build quote params
         address tokenIn = address(prizePool.prizeToken());
         QuoteParams[] memory quoteParams = new QuoteParams[](1);
@@ -225,10 +231,12 @@ contract PrizeCompoundingSwapperHookAndClaimer is PrizeCompoundingSwapperHook, I
         for (uint256 i = 0; i < accounts.length; i++) {
             address swapper = swappers[accounts[i]];
             if (swapper == address(0)) {
-                emit SwapperNotSetForWinner(accounts[i]);
+                emit SwapperNotSetForAccount(accounts[i]);
             } else {
                 quoteParams[0].baseAmount = uint128(IERC20(tokenIn).balanceOf(swapper));
-                ISwapper(swapper).flash(quoteParams, "");
+                if (quoteParams[0].baseAmount != 0) {
+                    ISwapper(swapper).flash(quoteParams, "");
+                }
             }
         }
 

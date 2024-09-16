@@ -16,9 +16,9 @@ import {
     QuotePair
 } from "src/prize-hooks/examples/prize-compounding-swapper/PrizeCompoundingSwapperHookAndClaimer.sol";
 import { PrizePool } from "pt-v5-prize-pool/PrizePool.sol";
-import { PrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
+import { IPrizeHooks, PrizeHooks } from "pt-v5-vault/interfaces/IPrizeHooks.sol";
 
-contract PrizeCompoundingSwapperHookAndClaimerTest is Test {
+contract PrizeCompoundingSwapperHookAndClaimerTest is Test, IPrizeHooks {
 
     uint256 fork;
     uint256 forkBlock = 19393711;
@@ -265,9 +265,9 @@ contract PrizeCompoundingSwapperHookAndClaimerTest is Test {
 
     function testClaimPrizesWithCompounding_swappersNotSetForClaims() external {
         vm.expectEmit();
-        emit PrizeCompoundingSwapperHookAndClaimer.SwapperNotSetForWinner(winners[0]);
+        emit PrizeCompoundingSwapperHookAndClaimer.SwapperNotSetForAccount(winners[0]);
         vm.expectEmit();
-        emit PrizeCompoundingSwapperHookAndClaimer.SwapperNotSetForWinner(winners[1]);
+        emit PrizeCompoundingSwapperHookAndClaimer.SwapperNotSetForAccount(winners[1]);
         vm.expectRevert(abi.encodeWithSelector(PrizeCompoundingSwapperHookAndClaimer.MinRewardNotMet.selector, 0, 1));
         hookAndClaimer.claimPrizes(winTier, winners, prizeIndices, alice, 1);
     }
@@ -318,6 +318,23 @@ contract PrizeCompoundingSwapperHookAndClaimerTest is Test {
         assertEq(IERC20(WETH).balanceOf(alice), totalReward);
     }
 
+    function testClaimPrizes_noReentrancy() external {
+        // set winner to reenter claimPrizes with custom hook
+        vm.startPrank(winners[0]);
+        przUSDC.setHooks(PrizeHooks(true, false, this));
+        vm.stopPrank();
+
+        // other winner will be normal
+        vm.startPrank(winners[1]);
+        hookAndClaimer.setSwapper();
+        przUSDC.setHooks(PrizeHooks(true, false, hookAndClaimer));
+        vm.stopPrank();
+
+        vm.expectEmit();
+        emit PrizeCompoundingSwapperHookAndClaimer.ClaimError(przUSDC, winTier, winners[0], 417, "");
+        hookAndClaimer.claimPrizes(winTier, winners, prizeIndices, alice, 1);
+    }
+
     // helpers for decoding error data
     function VoteToStayAtCurrentPrizeTiers(uint8 currentTiers, uint256 dailyPrizeSize, uint256 minDesiredDailyPrizeSize) external view returns (uint8,uint256,uint256) {
         return (currentTiers, dailyPrizeSize, minDesiredDailyPrizeSize);
@@ -325,5 +342,14 @@ contract PrizeCompoundingSwapperHookAndClaimerTest is Test {
     function VoteToLowerPrizeTiers(uint8 currentTiers, uint256 dailyPrizeSize, uint256 minDesiredDailyPrizeSize) external view returns (uint8,uint256,uint256) {
         return (currentTiers, dailyPrizeSize, minDesiredDailyPrizeSize);
     }
+
+    /// @inheritdoc IPrizeHooks
+    /// @dev used to test reentrancy to the `claimPrizes` function
+    function beforeClaimPrize(address, uint8, uint32, uint96, address) external returns (address prizeRecipient, bytes memory data) {
+        hookAndClaimer.claimPrizes(winTier, winners, prizeIndices, address(this), 1);
+    }
+
+    /// @inheritdoc IPrizeHooks
+    function afterClaimPrize(address, uint8, uint32, uint256, address, bytes memory) external { }
 
 }
