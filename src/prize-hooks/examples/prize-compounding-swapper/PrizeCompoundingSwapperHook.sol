@@ -11,7 +11,7 @@ import { ISwapperFactory, CreateSwapperParams, OracleParams, CreateOracleParams,
 
 // The approximate denominator of the next daily prize size compared to the current daily prize
 // size if the prize pool goes up in tiers.
-uint256 constant NEXT_TIER_DAILY_PRIZE_DENOMINATOR = 4;
+uint256 constant NEXT_TIER_DAILY_PRIZE_DENOMINATOR = 8;
 
 /// @title PoolTogether V5 - Prize Compounding Swapper Hook
 /// @notice Uses the 0xSplits Swapper contract factory to let users create their own swappers
